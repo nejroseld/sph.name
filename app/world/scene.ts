@@ -2,11 +2,12 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { createAvatar } from "./avatar";
+import { HOLD, SETTLE, SLEEP_IN, SLEEP_OUT, createAutoSnap, scrollToProgress } from "./track";
 
 type Parent = THREE.Object3D;
 type V3 = [number, number, number];
 type Pose = { p: V3; yaw: number; lean: number; arms: [number, number]; elbows: [number, number]; spread: [number, number]; thighs: [number, number]; knees: [number, number]; head: number };
-export type WorldFrame = { index: number; progress: number; anchor: [number,number]; detail: [number,number]; opacity: number; night: number; sleeping: boolean };
+export type WorldFrame = { index: number; progress: number; enter: number; leave: number; anchor: [number,number]; detail: [number,number]; opacity: number; night: number; sleeping: boolean };
 export type WorldOptions = { onFrame?: (state:WorldFrame)=>void; onLoop?:()=>void };
 const TAU = Math.PI * 2;
 const mix = THREE.MathUtils.lerp;
@@ -226,7 +227,8 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
   let alive=true,raf=0,motion=initialMotion,blocked=false,t=0,arrival=initialMotion?0:7,lastIndex=0,lastTime=performance.now();
   let progress=0,target=0,desiredAngle=0,userAngle=0,pointerX=0,pointerY=0,drag=false,dragX=0,width=1,height=1,lastPaint=0;
   let sleepTime=0,loopSent=false;
-  const sampleScroll=()=>{const span=Math.max(1,document.documentElement.scrollHeight-innerHeight);target=THREE.MathUtils.clamp(scrollY/span*6.96,0,6.96);};
+  const sampleScroll=()=>{target=scrollToProgress(scrollY);};
+  const snap=createAutoSnap(()=>motion&&!blocked&&!drag);
   const resize=()=>{const bounds=mount.getBoundingClientRect();width=bounds.width;height=bounds.height;if(!width||!height)return;renderer.setSize(width,height);camera.aspect=width/height;camera.updateProjectionMatrix();sampleScroll();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();progress=target;
   const onDown=(e:PointerEvent)=>{if(e.pointerType!=="mouse"||e.button!==0)return;drag=true;dragX=e.clientX;mount.setPointerCapture(e.pointerId);};
@@ -241,24 +243,26 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
     if(i===2){p.head+=Math.sin(time*.6)*.045;p.elbows[0]+=Math.sin(time*1.1)*.025;}
     if(i===3||i===4){p.elbows[0]+=Math.sin(time*7.9)*.035;p.elbows[1]+=Math.sin(time*9.1+1)*.035;p.head+=Math.sin(time*.8)*.035;}
     if(i===5){p.elbows=[-.23-(.5+.5*Math.sin(time*1.7))*1.80,-.23-(.5+.5*Math.sin(time*1.7+Math.PI))*1.80];p.p[1]+=Math.cos(time*3.4)*.009;}
-    if(i===6){const sleep=smooth(.48,.92,local);p.p=[mix(.57,-.88,sleep),mix(.04,.76,sleep),mix(.65,1.02,sleep)];p.yaw=mix(-.25,0,sleep);p.lean=-Math.PI/2*sleep;p.arms=[mix(-.3,.05,sleep),mix(-.2,.03,sleep)];p.elbows=[mix(-.7,-.10,sleep),mix(-.6,-.1,sleep)];p.head=sleep*.04;}
+    if(i===6){const sleep=smooth(SLEEP_IN,SLEEP_OUT,local);p.p=[mix(.57,-.88,sleep),mix(.04,.76,sleep),mix(.65,1.02,sleep)];p.yaw=mix(-.25,0,sleep);p.lean=-Math.PI/2*sleep;p.arms=[mix(-.3,.05,sleep),mix(-.2,.03,sleep)];p.elbows=[mix(-.7,-.10,sleep),mix(-.6,-.1,sleep)];p.head=sleep*.04;}
     return p;
   };
   const vec=new THREE.Vector3(),camTarget=new THREE.Vector3(),camPosition=new THREE.Vector3(),axis=new THREE.Vector3(0,1,0);
   const project=(p:V3,i:number):[number,number]=>{vec.set(...p).applyMatrix4(sets[i].matrixWorld).project(camera);return [(vec.x*.5+.5)*width,(-vec.y*.5+.5)*height];};
   const render=(now:number)=>{
     if(!alive)return;raf=requestAnimationFrame(render);const dt=Math.min(.05,(now-lastTime)/1000);lastTime=now;if(document.hidden)return;
+    snap.update(now);
     if(motion&&!blocked)t+=dt;
     const damping=1-Math.exp(-dt*9);progress=motion?mix(progress,target,damping):target;
     const i=Math.min(6,Math.floor(progress)),next=Math.min(6,i+1),local=progress-i;
-    const f=i===6?0:(motion?smooth(.55,.98,local):local>.80?1:0);
+    const f=i===6?0:(motion?smooth(HOLD,SETTLE,local):local>.80?1:0);
     const index=f>.50?next:i;
     if(lastIndex!==index){arrival=0;lastIndex=index;sleepTime=0;}if(motion&&!blocked)arrival+=dt;
     if(!motion&&!drag&&Math.abs(progress-target)<.001&&Math.abs(userAngle-desiredAngle)<.001&&now-lastPaint<140)return;lastPaint=now;
     const a=poseAt(i,t,local),b=poseAt(next,t,0);
     const angle=(i+f)/7*TAU;
     const center=new THREE.Vector3(Math.sin(angle)*11,0,Math.cos(angle)*11);
-    sets.forEach((set,j)=>set.visible=(j===i||j===next));
+    // The previous set is dropped as soon as the camera has fully arrived, not only when progress crosses the chapter.
+    sets.forEach((set,j)=>set.visible=j===next||(j===i&&f<1));
     const p=a.p.map((v,j)=>mix(v,b.p[j],f)) as V3;
     vec.set(...p).applyAxisAngle(axis,angle);actor.position.copy(center).add(vec);
     actor.rotation.set(mix(a.lean,b.lean,f),angle+mix(a.yaw,b.yaw,f),0,"YXZ");
@@ -266,11 +270,11 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
     for(let k=0;k<2;k++){arms[k].rotation.set(mix(a.arms[k],b.arms[k],f)-Math.sin(t*5.4+k*Math.PI)*travel*.24,0,mix(a.spread[k],b.spread[k],f));elbows[k].rotation.x=mix(a.elbows[k],b.elbows[k],f);thighs[k].rotation.x=mix(a.thighs[k],b.thighs[k],f)+Math.sin(t*5.4+k*Math.PI)*travel*.42;knees[k].rotation.x=mix(a.knees[k],b.knees[k],f)+Math.max(0,-Math.sin(t*5.4+k*Math.PI))*travel*.4;}
     head.rotation.set(mix(a.head,b.head,f),motion?Math.sin(t*.47)*.035:0,motion?Math.sin(t*.7)*.009:0);
     body.scale.y=1+(motion?Math.sin(t*1.75)*.0024:0);
-    const sleeping=index===6&&local>.92;
+    const sleeping=index===6&&local>SLEEP_OUT;
     const shut=(index===0&&arrival<1.0&&motion)||sleeping;
     const blink=shut?.10:(motion&&Math.sin(t*1.29)>.995?.12:1);eyes.forEach(e=>e.scale.y=blink);
     avatar.setOutfit(index===0||index===6?0:index===1?2:index===5?3:1);heldBook.visible=index===2;dumbbells.forEach(d=>d.visible=index===5);
-    const sleepingDim=index===6?smooth(.5,.93,local):0;
+    const sleepingDim=index===6?smooth(SLEEP_IN,SLEEP_OUT,local):0;
     sky.copy(colors[i]).lerp(colors[next],f);floorMat.color.copy(sky);(scene.fog as THREE.Fog).color.copy(sky);
     const darkness=(i===4?1-f:next===4?f:0)*.50+(i===6?1-f:next===6?f:0)*.75;
     ambient.intensity=mix(2.05,.85,darkness);keyLight.intensity=mix(3.5,1.4,darkness)*(1-sleepingDim*.25);
@@ -285,8 +289,12 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
     const base=new THREE.Vector3(6.4,4.1,10.8).multiplyScalar(distance*mobileZoom);base.applyAxisAngle(axis,angle+userAngle+(motion?pointerX*.10:0));base.y+=(motion?pointerY*.25:0);
     camPosition.copy(center).add(base);camera.position.copy(camPosition);
     camTarget.copy(center).add(new THREE.Vector3(mobile?0:.06,mobile?1.00:1.24,0));camera.lookAt(camTarget);camera.updateMatrixWorld();scene.updateMatrixWorld(true);
-    const labelOpacity=1-Math.pow(Math.sin(f*Math.PI),2);
-    options.onFrame?.({index,progress,anchor:project(anchors[index],index),detail:project(details[index],index),opacity:labelOpacity,night:darkness,sleeping});
+    // Caption leaves as soon as the camera starts moving and comes back only after the previous set is gone:
+    // `enter` is measured from the settle point of the preceding transition (local 0.98 → 1.12 of track progress).
+    const sinceSettle=(index===i?local:local-1)+(1-SETTLE);
+    const enter=!motion||index===0?1:smooth(0,.14,sinceSettle);
+    const leave=!motion||index!==i?1:1-smooth(0,.3,f);
+    options.onFrame?.({index,progress,enter,leave,anchor:project(anchors[index],index),detail:project(details[index],index),opacity:Math.min(enter,leave),night:darkness,sleeping});
     try{renderer.render(scene,camera);}catch(error){console.error("3D render failed",error);alive=false;cancelAnimationFrame(raf);onFailure();return;}
     if(sleeping&&motion&&!blocked&&!loopSent){sleepTime+=dt;if(sleepTime>3.2){loopSent=true;options.onLoop?.();}}else if(!sleeping){sleepTime=0;loopSent=false;}
   };
@@ -294,8 +302,8 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
   return {
     setMotion(value:boolean){motion=value;},
     setBlocked(value:boolean){blocked=value;},
-    restart(){target=0;progress=0;arrival=0;sleepTime=0;loopSent=false;lastIndex=0;t=0;},
+    restart(){snap.cancel();target=0;progress=0;arrival=0;sleepTime=0;loopSent=false;lastIndex=0;t=0;},
     reset(){desiredAngle=0;pointerX=0;pointerY=0;},
-    destroy(){alive=false;cancelAnimationFrame(raf);observer.disconnect();window.removeEventListener("scroll",sampleScroll);window.removeEventListener("resize",resize);mount.removeEventListener("pointerdown",onDown);mount.removeEventListener("pointermove",onMove);mount.removeEventListener("pointerup",onUp);mount.removeEventListener("pointercancel",onUp);mount.removeEventListener("pointerleave",onLeave);renderer.domElement.removeEventListener("webglcontextlost",contextLost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());environment.dispose();renderer.dispose();renderer.domElement.remove();},
+    destroy(){alive=false;cancelAnimationFrame(raf);snap.destroy();observer.disconnect();window.removeEventListener("scroll",sampleScroll);window.removeEventListener("resize",resize);mount.removeEventListener("pointerdown",onDown);mount.removeEventListener("pointermove",onMove);mount.removeEventListener("pointerup",onUp);mount.removeEventListener("pointercancel",onUp);mount.removeEventListener("pointerleave",onLeave);renderer.domElement.removeEventListener("webglcontextlost",contextLost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());environment.dispose();renderer.dispose();renderer.domElement.remove();},
   };
 }

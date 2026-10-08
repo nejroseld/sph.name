@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Pause, Play, RotateCcw, X, Plus, Minus, LoaderCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet";
 import type { WorldFrame } from "../world/scene";
+import { TRACK_END, restPoint, progressToScroll, scrollToProgress } from "../world/track";
 import posterFrames from "../world/poster-frames.json";
 
 type Panel = "projects" | "philosophy" | "contact" | null;
@@ -61,14 +62,16 @@ export default function DayExperience() {
       const textWidth=label.current?.offsetWidth??(mobile?240:325);
       const x=mobile?24:Math.max(42,Math.min(innerWidth-textWidth-28,frame.anchor[0]-textWidth+20));
       const y=mobile?Math.max(118,frame.anchor[1]-190):Math.max(145,Math.min(innerHeight-230,frame.anchor[1]));
-      if(label.current){label.current.style.transform=`translate3d(${x}px,${y}px,0)`;label.current.style.opacity=String(frame.opacity);}
+      // Outgoing caption drifts up as it fades, the incoming one settles down into place.
+      const drift=(1-frame.enter)*18-(1-frame.leave)*18;
+      if(label.current){label.current.style.transform=`translate3d(${x}px,${y+drift}px,0)`;label.current.style.opacity=String(frame.opacity);}
       if(hotspot.current){
         const hx=Math.max(24,Math.min(innerWidth-210,frame.detail[0]));
         const hy=mobile?Math.min(innerHeight-156,Math.max(y+130,frame.detail[1]+85)):Math.max(130,Math.min(innerHeight-160,frame.detail[1]));
-        hotspot.current.style.transform=`translate3d(${hx}px,${hy}px,0)`;hotspot.current.style.opacity=String(frame.opacity);
+        hotspot.current.style.transform=`translate3d(${hx}px,${hy+drift}px,0)`;hotspot.current.style.opacity=String(frame.opacity);hotspot.current.style.pointerEvents=frame.opacity<.5?"none":"";
       }
       root.current?.style.setProperty("--night",String(frame.night));
-      if(progressBar.current)progressBar.current.style.transform=`scaleX(${frame.progress/6.96})`;
+      if(progressBar.current)progressBar.current.style.transform=`scaleX(${frame.progress/TRACK_END})`;
     };
     const onLoop=()=>{
       if(!alive||flags.current.panel||flags.current.closing)return;
@@ -96,14 +99,14 @@ export default function DayExperience() {
     world.current?.destroy();world.current=null;
     let sleepStarted=0,loopSent=false;
     const update=()=>{
-      const progress=Math.min(6.96,Math.max(0,scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight)*6.96));
+      const progress=scrollToProgress(scrollY);
       const index=Math.min(6,Math.floor(progress+.18));
       const mobile=innerWidth<760;
       const still=posterFrames[`${chapters[index].id}${mobile?"-mobile":""}` as keyof typeof posterFrames];
       const sleeping=progress>6.90;
       const scale=Math.max(innerWidth/still.width,innerHeight/still.height);
       const dx=(innerWidth-still.width*scale)/2,dy=(innerHeight-still.height*scale)/2;
-      frameHandler.current({index,progress,anchor:[still.anchor[0]*scale+dx,still.anchor[1]*scale+dy],detail:[still.detail[0]*scale+dx,still.detail[1]*scale+dy],opacity:1,night:index===4?.5:index===6?.75:0,sleeping});
+      frameHandler.current({index,progress,enter:1,leave:1,anchor:[still.anchor[0]*scale+dx,still.anchor[1]*scale+dy],detail:[still.detail[0]*scale+dx,still.detail[1]*scale+dy],opacity:1,night:index===4?.5:index===6?.75:0,sleeping});
       if(sleeping&&flags.current.motion&&!flags.current.panel&&!flags.current.closing){if(!sleepStarted)sleepStarted=performance.now();if(!loopSent&&performance.now()-sleepStarted>3200){loopSent=true;loopHandler.current();}}
       else{sleepStarted=0;if(!sleeping)loopSent=false;}
     };
@@ -112,10 +115,7 @@ export default function DayExperience() {
   },[failed]);
 
   useEffect(()=>{flags.current.panel=panel;world.current?.setBlocked(!!panel||flags.current.closing);},[panel]);
-  const go=(index:number)=>{
-    const span=Math.max(1,document.documentElement.scrollHeight-innerHeight);
-    window.scrollTo({top:span*(index/6.96),behavior:motion?"smooth":"instant"});
-  };
+  const go=(index:number)=>{window.scrollTo({top:progressToScroll(restPoint(index)),behavior:motion?"smooth":"instant"});};
   const toggleMotion=()=>{const next=!motion;setMotion(next);flags.current.motion=next;world.current?.setMotion(next);};
   const copy=async()=>{try{await navigator.clipboard.writeText("dev@stfn.uk");setCopyFailed(false);setCopied(true);timers.current.push(setTimeout(()=>setCopied(false),2000));}catch{setCopyFailed(true);}};
   const openPanel=(next:Panel)=>{panelTrigger.current=document.activeElement as HTMLElement;setReadNote(false);setProject(null);setPanel(next);};
@@ -143,7 +143,7 @@ export default function DayExperience() {
       {sleeping&&!motion&&<button className="new-day-button" onClick={()=>{window.scrollTo({top:0,behavior:"instant"});world.current?.restart();}}>Новый день</button>}
       <div className="scroll-track" aria-hidden="true" />
       <footer className="day-footer">
-        <div className="scene-clock"><span>{current.time}</span><span className="clock-divider"/><span>{current.name}</span></div>
+        <div className="scene-clock" key={current.id}><span>{current.time}</span><span className="clock-divider"/><span>{current.name}</span></div>
         <nav className="day-nav" aria-label="Главы дня">{chapters.map((chapter,i)=><button key={chapter.id} onClick={()=>go(i)} aria-label={`${chapter.name}, ${chapter.time}`} aria-current={i===active?"step":undefined} className={i===active?"active":""}><i/><span>{chapter.name}</span></button>)}</nav>
         <div className="scene-controls"><span className="scroll-cue">{active===0?"Листай вниз":active===6?"День замыкается":""}</span><button onClick={toggleMotion} aria-label={motion?"Остановить анимацию":"Включить анимацию"} aria-pressed={!motion}>{motion?<Pause size={15}/>:<Play size={15}/>}</button>{!failed&&<button onClick={()=>world.current?.reset()} aria-label="Вернуть ракурс"><RotateCcw size={15}/></button>}</div>
         <div className="reading-progress" aria-hidden="true"><div ref={progressBar}/></div>
