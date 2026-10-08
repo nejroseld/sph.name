@@ -8,7 +8,7 @@ import { TRACK_END, restPoint, progressToScroll, scrollToProgress } from "../wor
 import posterFrames from "../world/poster-frames.json";
 
 type Panel = "projects" | "philosophy" | "contact" | null;
-type World = { destroy():void; setMotion(value:boolean):void; setBlocked(value:boolean):void; reset():void; restart():void };
+type World = { destroy():void; setMotion(value:boolean):void; setBlocked(value:boolean):void; reset():void; restart():void; goTo(chapter:number):void };
 const chapters = [
   { id:"morning", name:"Подъём", time:"07:00", title:"Степан.", action:null, actionLabel:"" },
   { id:"city", name:"По пути", time:"08:10", title:"Мысли по пути.", action:"philosophy", actionLabel:"Философия" },
@@ -73,6 +73,7 @@ export default function DayExperience() {
       root.current?.style.setProperty("--night",String(frame.night));
       if(progressBar.current)progressBar.current.style.transform=`scaleX(${frame.progress/TRACK_END})`;
     };
+    // Static-poster mode only: the 3D world loops by orbiting the camera on into the morning room itself.
     const onLoop=()=>{
       if(!alive||flags.current.panel||flags.current.closing)return;
       flags.current.closing=true;setClosing(true);world.current?.setBlocked(true);
@@ -87,7 +88,7 @@ export default function DayExperience() {
     frameHandler.current=onFrame;loopHandler.current=onLoop;
     import("../world/scene").then(({createWorld})=>{
       if(!alive||!mount.current)return;
-      world.current=createWorld(mount.current,!media.matches,()=>{if(alive)setFailed(true);},{onFrame,onLoop});setReady(true);
+      world.current=createWorld(mount.current,!media.matches,()=>{if(alive)setFailed(true);},{onFrame});setReady(true);
     }).catch(error=>{console.error("3D initialization failed",error);if(alive)setFailed(true);});
     const preference=()=>{setMotion(!media.matches);flags.current.motion=!media.matches;world.current?.setMotion(!media.matches);};
     media.addEventListener("change",preference);
@@ -115,7 +116,11 @@ export default function DayExperience() {
   },[failed]);
 
   useEffect(()=>{flags.current.panel=panel;world.current?.setBlocked(!!panel||flags.current.closing);},[panel]);
-  const go=(index:number)=>{window.scrollTo({top:progressToScroll(restPoint(index)),behavior:motion?"smooth":"instant"});};
+  const go=(index:number)=>{
+    // The world glides there itself (and lifts its one-chapter-per-gesture limit for the trip); otherwise plain scroll.
+    if(world.current&&motion)world.current.goTo(index);
+    else window.scrollTo({top:progressToScroll(restPoint(index)),behavior:motion?"smooth":"instant"});
+  };
   const toggleMotion=()=>{const next=!motion;setMotion(next);flags.current.motion=next;world.current?.setMotion(next);};
   const copy=async()=>{try{await navigator.clipboard.writeText("dev@stfn.uk");setCopyFailed(false);setCopied(true);timers.current.push(setTimeout(()=>setCopied(false),2000));}catch{setCopyFailed(true);}};
   const openPanel=(next:Panel)=>{panelTrigger.current=document.activeElement as HTMLElement;setReadNote(false);setProject(null);setPanel(next);};
