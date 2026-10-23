@@ -242,7 +242,7 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
   // chapter-0 set. `loopK` is that dawn, 0..1. One scroll gesture carries night into morning.
   const SLEEP_HOLD=.7,LOOP_DURATION=2.4,WAKE_DELAY=.3;
   let sleepTime=0,loopSent=false,looping=false,loopK=0,wakeFade=false;
-  const snap=createAutoSnap(()=>motion&&!blocked&&!drag&&!looping,()=>motion);
+  const snap=createAutoSnap(()=>motion&&!blocked&&!drag&&!looping,()=>motion,()=>!blocked&&!looping);
   const sampleScroll=()=>{target=snap.target();};
   const resize=()=>{const bounds=mount.getBoundingClientRect();width=bounds.width;height=bounds.height;if(!width||!height)return;renderer.setSize(width,height);camera.aspect=width/height;camera.updateProjectionMatrix();sampleScroll();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();progress=target;

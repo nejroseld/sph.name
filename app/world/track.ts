@@ -16,12 +16,20 @@ export const WAKE_IN = .02;
 export const WAKE_OUT = REST;
 export const STRETCH_OUT = HOLD - FADE;
 const IDLE_MS = 120;
+// Touch paging: a swipe of DRAG viewport heights carries the scene all the way to the neighbouring resting point;
+// on release it commits past COMMIT viewport heights or above FLICK px/ms, otherwise it springs back.
+const DRAG = .55, COMMIT = .1, FLICK = .3;
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 // Quintic "smootherstep": zero velocity and zero acceleration at both ends, so the glide neither jolts nor stops dead.
 const ease = (k: number) => k * k * k * (k * (k * 6 - 15) + 10);
 
 export const restPoint = (chapter: number) => chapter > LAST ? TRACK_END : chapter + REST;
+// Every place a swipe can land: in bed, each chapter's resting point, asleep.
+const RESTS = [0, ...Array.from({ length: LAST + 1 }, (_, i) => restPoint(i)), TRACK_END];
+const isRest = (p: number) => RESTS.some(r => Math.abs(r - p) < 1e-3);
+const restBelow = (p: number) => [...RESTS].reverse().find(r => r < p - 1e-3) ?? p;
+const restAbove = (p: number) => RESTS.find(r => r > p + 1e-3) ?? p;
 export const trackSpan = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
 export const progressToScroll = (p: number) => trackSpan() * p / TRACK_END;
 export const scrollToProgress = (y: number) => clamp(y / trackSpan() * TRACK_END, 0, TRACK_END);
@@ -48,9 +56,12 @@ export function snapTarget(progress: number, direction: number): number | null {
 //    (from the first input until the page has settled) can move at most one chapter in either direction.
 //    Any extra scroll is ignored, and the page is quietly glided back to what is on screen afterwards.
 //  - Once the user stops inside a transition, `update()` glides the page to the nearest resting point.
-export function createAutoSnap(allowed: () => boolean, limited: () => boolean) {
+//  - On touch screens the page never scrolls natively (no momentum, no browser toolbar resizing the track mid-gesture):
+//    a swipe drags the scene towards the neighbouring resting point and, on release, completes the step or springs back.
+//    `touchable()` says whether swipes may move the scene right now; touches inside an open panel are always left alone.
+export function createAutoSnap(allowed: () => boolean, limited: () => boolean, touchable: () => boolean) {
   let lastInput = performance.now(), lastY = scrollY, direction = 0, evaluated = false, lastEval = 0;
-  let snapping = false, from = 0, to = 0, start = 0, duration = 0, expected = -1, expectedPrev = -1;
+  let snapping = false, from = 0, to = 0, goal = 0, start = 0, duration = 0, expected = -1, expectedPrev = -1;
   let visual = scrollToProgress(scrollY), gesture = false, lo = 0, hi = TRACK_END;
   // When the user last drove the page, and until when a scroll may still be theirs (touch momentum runs long).
   let userUntil = 0;
@@ -87,14 +98,59 @@ export function createAutoSnap(allowed: () => boolean, limited: () => boolean) {
   const keys = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
   const onKey = (e: KeyboardEvent) => { if (keys.has(e.key)) input(); };
   const onWheel = () => input();
-  const onTouch = () => input(3000);
+  // The swipe in progress: where it started, the two resting points it may reach, and recent finger positions for the flick speed.
+  // `queued` is where an interrupted glide was heading, so a swipe in the same direction steps on from there.
+  let swipe: { y0: number; p0: number; prev: number; next: number; queued: number | null; samples: [number, number][] } | null = null;
+  const inPanel = (e: TouchEvent) => !!(e.target as Element | null)?.closest?.('[data-slot="sheet-content"]');
+  const place = (p: number) => { const y = progressToScroll(p); scrollTo({ top: y, behavior: "instant" }); lastY = scrollY; };
+  const onTouchStart = (e: TouchEvent) => {
+    swipe = null;
+    if (e.touches.length !== 1 || inPanel(e) || !touchable()) return;
+    const queued = snapping ? goal : null;
+    if (snapping) cancel();
+    const p0 = visual; place(p0);
+    const prev = restBelow(p0), next = restAbove(p0);
+    gesture = true; lo = prev; hi = next; userUntil = performance.now() + 600; touch();
+    const y = e.touches[0].clientY;
+    swipe = { y0: y, p0, prev, next, queued, samples: [[performance.now(), y]] };
+  };
+  const onTouchMove = (e: TouchEvent) => {
+    if (inPanel(e) || e.touches.length > 1) return;
+    if (e.cancelable) e.preventDefault();
+    if (!swipe) return;
+    const now = performance.now(), y = e.touches[0].clientY, dy = swipe.y0 - y;
+    const k = Math.min(1, Math.abs(dy) / (innerHeight * DRAG));
+    swipe.samples.push([now, y]); while (swipe.samples.length > 2 && now - swipe.samples[0][0] > 100) swipe.samples.shift();
+    if (dy) direction = Math.sign(dy);
+    place(dy > 0 ? swipe.p0 + (swipe.next - swipe.p0) * k : swipe.p0 - (swipe.p0 - swipe.prev) * k);
+    userUntil = now + 600; touch();
+  };
+  const onTouchEnd = () => {
+    if (!swipe) return;
+    const { y0, p0, prev, next, queued, samples } = swipe; swipe = null;
+    const [t0, ya] = samples[0], [t1, yb] = samples[samples.length - 1];
+    const speed = t1 > t0 ? (ya - yb) / (t1 - t0) : 0, dy = y0 - yb;
+    const dir = Math.abs(speed) > FLICK ? Math.sign(speed) : Math.abs(dy) > innerHeight * COMMIT ? Math.sign(dy) : 0;
+    let target = dir > 0 ? next : dir < 0 ? prev : isRest(p0) ? p0 : p0 - prev < next - p0 ? prev : next;
+    // Swiping on in the direction a glide was already going adds one more step instead of repeating the same one.
+    if (dir && queued !== null && Math.sign(queued - p0) === dir) target = dir > 0 ? restAbove(queued) : restBelow(queued);
+    direction = dir; touch();
+    if (!limited()) { place(target); endGesture(); return; }
+    lo = Math.min(lo, target); hi = Math.max(hi, target);
+    if (!glide(target, performance.now())) endGesture();
+  };
+  // The browser chrome or a rotation changed the track's length: keep the scene where it is.
+  const onResize = () => { if (!swipe && !snapping) place(visual); };
   addEventListener("scroll", onScroll, { passive: true });
   addEventListener("wheel", onWheel, { passive: true });
-  addEventListener("touchstart", onTouch, { passive: true });
-  addEventListener("touchmove", onTouch, { passive: true });
+  addEventListener("touchstart", onTouchStart, { passive: true });
+  addEventListener("touchmove", onTouchMove, { passive: false });
+  addEventListener("touchend", onTouchEnd);
+  addEventListener("touchcancel", onTouchEnd);
+  addEventListener("resize", onResize);
   addEventListener("keydown", onKey);
-  const glide = (goal: number, now: number) => {
-    from = scrollY; to = progressToScroll(goal);
+  const glide = (p: number, now: number) => {
+    from = scrollY; to = progressToScroll(p); goal = p;
     if (Math.abs(to - from) < 1) return false;
     start = now; duration = 650 + 900 * Math.min(1.6, Math.abs(goal - scrollToProgress(from)));
     expected = expectedPrev = from; snapping = true; return true;
@@ -114,13 +170,13 @@ export function createAutoSnap(allowed: () => boolean, limited: () => boolean) {
         if (k >= 1) { cancel(); endGesture(); }
         return;
       }
-      if (!allowed() || now - lastInput < IDLE_MS) return;
+      if (swipe || !allowed() || now - lastInput < IDLE_MS) return;
       // Re-check every so often while idle, so a missed evaluation can never leave a transition half-done.
       if (evaluated && now - lastEval < 400) return;
       evaluated = true; lastEval = now;
       const p = scrollToProgress(scrollY);
-      const goal = clamp(snapTarget(p, direction) ?? p, bounded() ? lo : 0, bounded() ? hi : TRACK_END);
-      if (Math.abs(goal - p) < 1e-3 || !glide(goal, now)) endGesture();
+      const settle = clamp(snapTarget(p, direction) ?? p, bounded() ? lo : 0, bounded() ? hi : TRACK_END);
+      if (Math.abs(settle - p) < 1e-3 || !glide(settle, now)) endGesture();
     },
     // Chapter navigation: glide the page there, letting the scene travel through the chapters in between.
     goTo(p: number) {
@@ -128,11 +184,11 @@ export function createAutoSnap(allowed: () => boolean, limited: () => boolean) {
       if (!glide(p, performance.now())) endGesture();
     },
     // The scene has repositioned itself (restart, end-of-day loop): forget the gesture and adopt the new position.
-    jump(p: number) { cancel(); endGesture(); visual = p; lastY = progressToScroll(p); direction = 0; evaluated = false; },
+    jump(p: number) { cancel(); endGesture(); swipe = null; visual = p; lastY = progressToScroll(p); direction = 0; evaluated = false; },
     cancel,
     destroy() {
       cancel();
-      removeEventListener("scroll", onScroll); removeEventListener("wheel", onWheel); removeEventListener("touchstart", onTouch); removeEventListener("touchmove", onTouch); removeEventListener("keydown", onKey);
+      removeEventListener("scroll", onScroll); removeEventListener("wheel", onWheel); removeEventListener("touchstart", onTouchStart); removeEventListener("touchmove", onTouchMove); removeEventListener("touchend", onTouchEnd); removeEventListener("touchcancel", onTouchEnd); removeEventListener("resize", onResize); removeEventListener("keydown", onKey);
     },
   };
 }

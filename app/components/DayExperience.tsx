@@ -116,7 +116,7 @@ export default function DayExperience({ locale = "ru", notes = [] }: { locale?: 
   const dark=active===4||active===6;
 
   return (
-    <main ref={root} className={`experience ${dark?"is-dark":""} ${!motion?"is-still":""} ${failed?"is-static":""}`} data-scene={current.id}>
+    <main ref={root} className={`experience ${dark?"is-dark":""} ${!motion?"is-still":""} ${failed?"is-static":""} ${ready&&!failed?"is-paged":""}`} data-scene={current.id}>
       <a className="skip-link" href="#contact" onClick={e=>{e.preventDefault();openPanel("contact");}}>{ui.skip}</a>
       <div className="world" ref={mount} aria-label={`${ui.scene}: ${current.name}`} />
       <div className="vignette" aria-hidden="true" />
