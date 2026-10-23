@@ -1,6 +1,7 @@
 {
   "name": "stepan-one-day",
   "version": "0.1.0",
+  "license": "CC-BY-NC-ND-4.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
