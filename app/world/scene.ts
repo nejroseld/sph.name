@@ -170,11 +170,12 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
     box(parent,[2.85,.13,1.20],[.12,1.04,-.47],security?C.dark:C.wood,.05);
     for(const x of [-1.06,1.30])for(const z of [-.91,-.05])box(parent,[.085,.99,.085],[x,.50,z],C.dark,.018);
     const monitor=group(parent,[.14,1.77,-.81]);box(monitor,[1.68,1.05,.11],[0,0,0],C.black,.045);const screen=panel(monitor,1.54,.92,[0,0,.061],screenTexture(security));box(parent,[.065,.28,.055],[.14,1.21,-.83],C.steel,.015);box(parent,[.51,.035,.25],[.14,1.12,-.78],C.dark,.025);
-    box(parent,[.78,.036,.27],[.02,1.133,-.19],C.cream,.015);for(let row=0;row<3;row++)for(let col=0;col<11;col++)box(parent,[.046,.014,.038],[-.315+col*.064,1.158,-.27+row*.068],row===2&&col>3&&col<7?C.gray:C.white,.005);
-    sphere(parent,[.078,.035,.11],[.63,1.16,-.21],C.gray);
+    // Keyboard and mouse sit near the front edge, within reach of the seated figure's hands.
+    box(parent,[.78,.036,.27],[.02,1.133,0],C.cream,.015);for(let row=0;row<3;row++)for(let col=0;col<11;col++)box(parent,[.046,.014,.038],[-.315+col*.064,1.158,-.08+row*.068],row===2&&col>3&&col<7?C.gray:C.white,.005);
+    sphere(parent,[.078,.035,.11],[.63,1.16,-.02],C.gray);
     mug(parent,[-.95,1.12,-.42],C.lime);lamp(parent,[1.25,1.12,-.67],.70);
-    box(parent,[.63,.14,.60],[0,.65,.95],C.dark,.10);box(parent,[.62,.68,.11],[0,1.02,1.25],C.dark,.09);cylinder(parent,.05,.06,.52,[0,.31,.95],C.steel);
-    for(let i=0;i<5;i++){const leg=box(parent,[.055,.07,.54],[0,.06,.95],C.dark,.025);leg.rotation.y=i*TAU/5;leg.position.x=Math.sin(i*TAU/5)*.23;leg.position.z+=Math.cos(i*TAU/5)*.23;}
+    box(parent,[.63,.14,.60],[0,.72,.78],C.dark,.10);box(parent,[.62,.68,.11],[0,1.09,1.08],C.dark,.09);cylinder(parent,.05,.06,.66,[0,.38,.78],C.steel);
+    for(let i=0;i<5;i++){const leg=box(parent,[.055,.07,.54],[0,.06,.78],C.dark,.025);leg.rotation.y=i*TAU/5;leg.position.x=Math.sin(i*TAU/5)*.23;leg.position.z+=Math.cos(i*TAU/5)*.23;}
     return screen.material as THREE.MeshBasicMaterial;
   };
   // 04 — A personal software project.
@@ -224,8 +225,9 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
     {...basePose([.56,.04,.62],.02)},
     {...basePose([-.15,.04,1.10],.68)},
     {...basePose([-.25,.02,.68],.10),arms:[-.57,-.55],elbows:[-1.07,-1.12],head:.12},
-    {...basePose([0,-.43,.74],Math.PI-.15),arms:[-.48,-.48],elbows:[-1.11,-1.11],thighs:[-1.30,-1.30],knees:[1.28,1.28],head:.10},
-    {...basePose([0,-.43,.74],Math.PI-.15),arms:[-.48,-.48],elbows:[-1.11,-1.11],thighs:[-1.30,-1.30],knees:[1.28,1.28],head:.12},
+    // Seat height and arm angles put the fingertips on the keys with the forearms just clearing the desk edge.
+    {...basePose([0,-.36,.57],Math.PI-.15),arms:[-.78,-.78],elbows:[-.95,-.95],thighs:[-1.18,-1.18],knees:[1.18,1.18],head:.10},
+    {...basePose([0,-.36,.57],Math.PI-.15),arms:[-.78,-.78],elbows:[-.95,-.95],thighs:[-1.18,-1.18],knees:[1.18,1.18],head:.12},
     {...basePose([-.47,.05,.60],.10),arms:[-.07,-.07]},
     {...basePose([.57,.04,.65],-.25),arms:[-.3,-.2]},
   ];
