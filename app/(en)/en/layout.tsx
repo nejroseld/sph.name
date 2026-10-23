@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "../../globals.css";
 import "@fontsource-variable/manrope";
+import { languageScript } from "../../components/language";
 import { metadataFor } from "../../components/copy";
 
 export const metadata: Metadata = {
@@ -19,6 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: languageScript("en") }} />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

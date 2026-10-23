@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "../globals.css";
 import "@fontsource-variable/manrope";
+import { languageScript } from "../components/language";
 import { metadataFor } from "../components/copy";
 
 // Each language has its own root layout so the document's lang attribute is right from the first byte.
@@ -20,6 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: languageScript("ru") }} />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );
