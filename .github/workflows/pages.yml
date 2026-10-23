@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [production]
+  # Manual run from the Actions tab.
+  workflow_dispatch:
+  # Lets another repository (e.g. a notes vault) trigger a rebuild:
+  #   POST /repos/<owner>/<repo>/dispatches  {"event_type": "notes-updated"}
+  repository_dispatch:
+    types: [notes-updated]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Optional: take notes from another repository instead of notes/ here.
+      # Set the repository variable NOTES_REPO (owner/name) and, for a private repo, the secret NOTES_TOKEN.
+      # That repository must have the same layout: ru/*.md and en/*.md at its root.
+      - name: Fetch notes from external repository
+        if: ${{ vars.NOTES_REPO != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.NOTES_REPO }}
+          token: ${{ secrets.NOTES_TOKEN || github.token }}
+          path: external-notes
+      - name: Use external notes
+        if: ${{ vars.NOTES_REPO != '' }}
+        run: rm -rf notes && mkdir notes && cp -r external-notes/ru external-notes/en notes/
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:pages
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/client
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

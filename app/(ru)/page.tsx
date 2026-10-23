@@ -1,2 +1,3 @@
 import DayExperience from "../components/DayExperience";
-export default function Home() { return <DayExperience locale="ru" />; }
+import { notesFor } from "../components/notes";
+export default function Home() { return <DayExperience locale="ru" notes={notesFor("ru")} />; }

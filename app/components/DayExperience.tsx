@@ -7,11 +7,12 @@ import type { WorldFrame } from "../world/scene";
 import { TRACK_END, restPoint, progressToScroll, scrollToProgress } from "../world/track";
 import posterFrames from "../world/poster-frames.json";
 import { copy as dictionary, type Locale } from "./copy";
+import type { Note } from "./notes";
 
 type Panel = "projects" | "philosophy" | "contact" | null;
 type World = { destroy():void; setMotion(value:boolean):void; setBlocked(value:boolean):void; reset():void; restart():void; goTo(chapter:number):void };
-export default function DayExperience({ locale = "ru" }: { locale?: Locale }) {
-  const t=dictionary[locale];const {chapters,projects,ui,note}=t;
+export default function DayExperience({ locale = "ru", notes = [] }: { locale?: Locale; notes?: Note[] }) {
+  const t=dictionary[locale];const {chapters,projects,ui}=t;
   const mount=useRef<HTMLDivElement>(null);
   const root=useRef<HTMLElement>(null);
   const label=useRef<HTMLDivElement>(null);
@@ -27,7 +28,7 @@ export default function DayExperience({ locale = "ru" }: { locale?: Locale }) {
   const [motion,setMotion]=useState(true);
   const [panel,setPanel]=useState<Panel>(null);
   const [closing,setClosing]=useState(false);
-  const [readNote,setReadNote]=useState(false);
+  const [readNote,setReadNote]=useState<number|null>(null);
   const [project,setProject]=useState<number|null>(null);
   const [copied,setCopied]=useState(false);
   const [copyFailed,setCopyFailed]=useState(false);
@@ -110,7 +111,7 @@ export default function DayExperience({ locale = "ru" }: { locale?: Locale }) {
   };
   const toggleMotion=()=>{const next=!motion;setMotion(next);flags.current.motion=next;world.current?.setMotion(next);};
   const copy=async()=>{try{await navigator.clipboard.writeText(t.email);setCopyFailed(false);setCopied(true);timers.current.push(setTimeout(()=>setCopied(false),2000));}catch{setCopyFailed(true);}};
-  const openPanel=(next:Panel)=>{panelTrigger.current=document.activeElement as HTMLElement;setReadNote(false);setProject(null);setPanel(next);};
+  const openPanel=(next:Panel)=>{panelTrigger.current=document.activeElement as HTMLElement;setReadNote(null);setProject(null);setPanel(next);};
   const current=chapters[active];
   const dark=active===4||active===6;
 
@@ -147,7 +148,7 @@ export default function DayExperience({ locale = "ru" }: { locale?: Locale }) {
           <SheetTitle className="folio-title">{panel?ui.titles[panel]:""}</SheetTitle>
           <SheetDescription className="sr-only">{panel?ui.descriptions[panel]:""}</SheetDescription>
           {panel==="projects"&&<div className="project-list">{projects.map((item,i)=><article key={item.title} className={`project-row ${project===i?"expanded":""}`}><button className="project-toggle" onClick={()=>setProject(project===i?null:i)} aria-expanded={project===i}><span className="item-index">0{i+1}</span><span><strong>{item.title}</strong><small>{item.type}</small></span>{project===i?<Minus size={19}/>:<Plus size={19}/>}</button>{project===i&&<div className="project-detail"><span className="item-status">{item.status}</span><p>{item.text}</p>{item.href&&<a href={item.href} target="_blank" rel="noreferrer">{ui.projectPage}</a>}</div>}</article>)}</div>}
-          {panel==="philosophy"&&<div className="notes">{!readNote?<button className="note-row" onClick={()=>setReadNote(true)}><span className="item-index">01</span><span><strong>{note.title}</strong><small>{note.meta}</small></span><Plus size={19}/></button>:<article className="note-reading"><button className="back-to-notes" onClick={()=>setReadNote(false)}>{note.all}</button><p className="item-status">{note.status}</p><h3>{note.title}</h3><p className="note-lead">{note.lead}</p>{note.body.map(text=><p key={text}>{text}</p>)}</article>}</div>}
+          {panel==="philosophy"&&<div className="notes">{readNote===null?(notes.length?notes.map((note,i)=><button key={note.slug} className="note-row" onClick={()=>setReadNote(i)}><span className="item-index">{String(i+1).padStart(2,"0")}</span><span><strong>{note.title}</strong><small>{note.meta}</small></span><Plus size={19}/></button>):<p className="item-status">{ui.noNotes}</p>):<article className="note-reading"><button className="back-to-notes" onClick={()=>setReadNote(null)}>{ui.allNotes}</button><p className="item-status">{notes[readNote].status}</p><h3>{notes[readNote].title}</h3><p className="note-lead">{notes[readNote].lead}</p>{notes[readNote].body.map(text=><p key={text}>{text}</p>)}</article>}</div>}
           {panel==="contact"&&<div className="contact-panel"><a href={`mailto:${t.email}`}>{t.email}</a><button onClick={copy} aria-label={copied?ui.copied:ui.copyAddress}>{copied?<Check size={20}/>:<Copy size={20}/>}</button><span role="status">{copied?ui.copiedStatus:copyFailed?ui.copyManually:""}</span></div>}
           <div className="folio-bottom">{ui.footer}</div>
         </SheetContent>
