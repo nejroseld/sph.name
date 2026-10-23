@@ -247,7 +247,8 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
   const resize=()=>{const bounds=mount.getBoundingClientRect();width=bounds.width;height=bounds.height;if(!width||!height)return;renderer.setSize(width,height);camera.aspect=width/height;camera.updateProjectionMatrix();sampleScroll();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();progress=target;
   const onDown=(e:PointerEvent)=>{if(e.pointerType!=="mouse"||e.button!==0)return;drag=true;dragX=e.clientX;mount.setPointerCapture(e.pointerId);};
-  const onMove=(e:PointerEvent)=>{pointerX=e.clientX/Math.max(1,width)-.5;pointerY=e.clientY/Math.max(1,height)-.5;if(drag){desiredAngle=THREE.MathUtils.clamp(desiredAngle+(e.clientX-dragX)*.004,-.55,.55);dragX=e.clientX;}};
+  // Only a mouse steers the camera; a finger is for swiping, and following it made the scene jump on every touch.
+  const onMove=(e:PointerEvent)=>{if(e.pointerType!=="mouse")return;pointerX=e.clientX/Math.max(1,width)-.5;pointerY=e.clientY/Math.max(1,height)-.5;if(drag){desiredAngle=THREE.MathUtils.clamp(desiredAngle+(e.clientX-dragX)*.004,-.55,.55);dragX=e.clientX;}};
   const onUp=()=>{drag=false;};const onLeave=()=>{if(!drag){pointerX=0;pointerY=0;}};
   const contextLost=(e:Event)=>{e.preventDefault();console.error("3D WebGL context lost",e);alive=false;cancelAnimationFrame(raf);onFailure();};
   mount.addEventListener("pointerdown",onDown);mount.addEventListener("pointermove",onMove);mount.addEventListener("pointerup",onUp);mount.addEventListener("pointercancel",onUp);mount.addEventListener("pointerleave",onLeave);renderer.domElement.addEventListener("webglcontextlost",contextLost);window.addEventListener("scroll",sampleScroll,{passive:true});window.addEventListener("resize",resize);

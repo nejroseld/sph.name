@@ -16,9 +16,10 @@ export const WAKE_IN = .02;
 export const WAKE_OUT = REST;
 export const STRETCH_OUT = HOLD - FADE;
 const IDLE_MS = 120;
-// Touch paging: a swipe of DRAG viewport heights carries the scene all the way to the neighbouring resting point;
-// on release it commits past COMMIT viewport heights or above FLICK px/ms, otherwise it springs back.
-const DRAG = .55, COMMIT = .1, FLICK = .3;
+// Touch paging: the finger is ignored until it has moved DEADZONE px, then a swipe of DRAG viewport heights carries
+// the scene all the way to the neighbouring resting point; on release it commits past COMMIT viewport heights
+// or above FLICK px/ms, otherwise it springs back.
+const DEADZONE = 14, DRAG = .8, COMMIT = .2, FLICK = .6;
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 // Quintic "smootherstep": zero velocity and zero acceleration at both ends, so the glide neither jolts nor stops dead.
@@ -119,7 +120,7 @@ export function createAutoSnap(allowed: () => boolean, limited: () => boolean, t
     if (e.cancelable) e.preventDefault();
     if (!swipe) return;
     const now = performance.now(), y = e.touches[0].clientY, dy = swipe.y0 - y;
-    const k = Math.min(1, Math.abs(dy) / (innerHeight * DRAG));
+    const k = Math.min(1, Math.max(0, Math.abs(dy) - DEADZONE) / (innerHeight * DRAG));
     swipe.samples.push([now, y]); while (swipe.samples.length > 2 && now - swipe.samples[0][0] > 100) swipe.samples.shift();
     if (dy) direction = Math.sign(dy);
     place(dy > 0 ? swipe.p0 + (swipe.next - swipe.p0) * k : swipe.p0 - (swipe.p0 - swipe.prev) * k);
@@ -130,7 +131,7 @@ export function createAutoSnap(allowed: () => boolean, limited: () => boolean, t
     const { y0, p0, prev, next, queued, samples } = swipe; swipe = null;
     const [t0, ya] = samples[0], [t1, yb] = samples[samples.length - 1];
     const speed = t1 > t0 ? (ya - yb) / (t1 - t0) : 0, dy = y0 - yb;
-    const dir = Math.abs(speed) > FLICK ? Math.sign(speed) : Math.abs(dy) > innerHeight * COMMIT ? Math.sign(dy) : 0;
+    const dir = Math.abs(dy) < DEADZONE ? 0 : Math.abs(speed) > FLICK ? Math.sign(speed) : Math.abs(dy) > innerHeight * COMMIT ? Math.sign(dy) : 0;
     let target = dir > 0 ? next : dir < 0 ? prev : isRest(p0) ? p0 : p0 - prev < next - p0 ? prev : next;
     // Swiping on in the direction a glide was already going adds one more step instead of repeating the same one.
     if (dir && queued !== null && Math.sign(queued - p0) === dir) target = dir > 0 ? restAbove(queued) : restBelow(queued);
@@ -164,7 +165,8 @@ export function createAutoSnap(allowed: () => boolean, limited: () => boolean, t
     },
     update(now: number) {
       if (snapping) {
-        const k = Math.min(1, (now - start) / duration);
+        // A frame's timestamp can predate a glide started by an event in the same frame: never run it backwards.
+        const k = clamp((now - start) / duration, 0, 1);
         expectedPrev = expected; expected = from + (to - from) * ease(k);
         scrollTo({ top: expected, behavior: "instant" });
         if (k >= 1) { cancel(); endGesture(); }
