@@ -128,7 +128,7 @@ export default function DayExperience({ locale = "ru" }: { locale?: Locale }) {
       {failed&&<><picture className="scene-poster"><source media="(max-width:759px)" srcSet={`/scene-posters/${sleeping?"sleep":current.id}-mobile.webp`}/><img src={`/scene-posters/${sleeping?"sleep":current.id}.webp`} alt=""/></picture><span className="static-hint" role="status">{ui.still}</span></>}
       <div className={`world-label ${active===0?"intro-label":""}`} ref={label}>
         {active===0?<h1>{ui.intro}</h1>:<h2>{current.title}</h2>}
-        {active===4&&<span className="quiet-meta">CTF / AppSec</span>}
+        {active===4&&<span className="quiet-meta">Purple Team</span>}
         {active===2&&<span className="quiet-meta">ITMO AI ENGINEERING</span>}
       </div>
       {current.action&&<button className="world-hotspot" ref={hotspot} onClick={()=>openPanel(current.action as Panel)}><span className="hotspot-node"><Plus size={13}/></span><span>{current.actionLabel}</span></button>}
@@ -147,7 +147,7 @@ export default function DayExperience({ locale = "ru" }: { locale?: Locale }) {
           <SheetTitle className="folio-title">{panel?ui.titles[panel]:""}</SheetTitle>
           <SheetDescription className="sr-only">{panel?ui.descriptions[panel]:""}</SheetDescription>
           {panel==="projects"&&<div className="project-list">{projects.map((item,i)=><article key={item.title} className={`project-row ${project===i?"expanded":""}`}><button className="project-toggle" onClick={()=>setProject(project===i?null:i)} aria-expanded={project===i}><span className="item-index">0{i+1}</span><span><strong>{item.title}</strong><small>{item.type}</small></span>{project===i?<Minus size={19}/>:<Plus size={19}/>}</button>{project===i&&<div className="project-detail"><span className="item-status">{item.status}</span><p>{item.text}</p>{item.href&&<a href={item.href} target="_blank" rel="noreferrer">{ui.projectPage}</a>}</div>}</article>)}</div>}
-          {panel==="philosophy"&&<div className="notes">{!readNote?<button className="note-row" onClick={()=>setReadNote(true)}><span className="item-index">01</span><span><strong>{note.title}</strong><small>{note.meta}</small></span><Plus size={19}/></button>:<article className="note-reading"><button className="back-to-notes" onClick={()=>setReadNote(false)}>{note.all}</button><p className="item-status">{note.status}</p><h3>{note.title}</h3><p className="note-lead">{note.lead}</p>{note.body.map(text=><p key={text}>{text}</p>)}<p className="note-end">{note.end}</p></article>}</div>}
+          {panel==="philosophy"&&<div className="notes">{!readNote?<button className="note-row" onClick={()=>setReadNote(true)}><span className="item-index">01</span><span><strong>{note.title}</strong><small>{note.meta}</small></span><Plus size={19}/></button>:<article className="note-reading"><button className="back-to-notes" onClick={()=>setReadNote(false)}>{note.all}</button><p className="item-status">{note.status}</p><h3>{note.title}</h3><p className="note-lead">{note.lead}</p>{note.body.map(text=><p key={text}>{text}</p>)}</article>}</div>}
           {panel==="contact"&&<div className="contact-panel"><a href={`mailto:${t.email}`}>{t.email}</a><button onClick={copy} aria-label={copied?ui.copied:ui.copyAddress}>{copied?<Check size={20}/>:<Copy size={20}/>}</button><span role="status">{copied?ui.copiedStatus:copyFailed?ui.copyManually:""}</span></div>}
           <div className="folio-bottom">{ui.footer}</div>
         </SheetContent>

@@ -36,9 +36,8 @@ export const copy = {
     },
     note: {
       title: "Истина как примитив", meta: "Рабочая заметка · 03.10.2026", status: "Рабочий тезис / 03.10.2026", all: "Все заметки",
-      lead: "Можно ли определить истину, не используя её в самом определении?",
-      body: ["В этой теории истина принимается как семантический примитив.", "Любое определение имеет форму утверждения P. Но утверждать P — уже значит претендовать на истинность P. Получается, понятие истины присутствует в основании самого определения."],
-      end: "Отправная точка для дальнейшего разбора.",
+      lead: "Истина не определима через другие понятия в том языке, на котором её определяют, если этот язык может называть свои предложения и подставлять имя предложения в формулу, а его базовая логика классическая или интуиционистская.",
+      body: ["Определение истины, претендующее схватить уже употребляемое понятие, есть утверждение, а притязание на истину заключено в самой силе утверждения: истина есть мерило правильности утверждаемого. Мерило утверждений языка распространяется на все его утверждения. Поэтому определение нашей истины - это определение истины того самого языка, на котором оно произнесено, и оно обязано охватить все его предложения, в том числе предложения о самом определении.", "Но в таком языке для любого кандидата D строится предложение, говорящее о себе, что D к нему неприменимо, и на нём D ошибается (Тарский). Значит, всякое определение либо ошибается на собственном языке, либо верно лишь на фрагменте, из которого изъяты некоторые предложения о нём самом, - и оценивает их уже не оно.", "Для собственной доказуемости результат ещё жёстче: формальная система, доказывающая, что всё доказуемое в ней истинно (Pr(⌜φ⌝) → φ для каждого φ), доказывает всё (Лёб).", "Итак, истина не определима никакими средствами языка, в котором она служит мерилом. Она семантический примитив как позиция: в своём языке - неопределимое мерило утверждения, в метаязыке - определимый предмет, тогда как мерило самого метаязыка там снова неопределимо."],
     },
     board: "ИТМО",
   },
@@ -73,9 +72,8 @@ export const copy = {
     },
     note: {
       title: "Truth as a primitive", meta: "Working note · 3 Oct 2026", status: "Working thesis / 3 Oct 2026", all: "All notes",
-      lead: "Can truth be defined without using it in the definition itself?",
-      body: ["In this theory, truth is taken as a semantic primitive.", "Any definition has the form of a statement P. But to assert P is already to claim that P is true. So the concept of truth is present at the very foundation of the definition."],
-      end: "A starting point for further analysis.",
+      lead: "Truth cannot be defined through other concepts in the very language in which it is being defined, provided that the language can name its own sentences and substitute a sentence's name into a formula, and its underlying logic is classical or intuitionistic.",
+      body: ["A definition of truth that claims to capture the concept already in use is itself an assertion, and the claim to truth lies in the very force of assertion: truth is the measure of correctness of what is asserted. The measure of a language's assertions extends to all of its assertions. So a definition of our truth is a definition of truth for the very language in which it is stated, and it must cover all of that language's sentences, including sentences about the definition itself.", "But in such a language, for any candidate D one can construct a sentence that says of itself that D does not apply to it, and D gets that sentence wrong (Tarski). So every definition either errs on its own language or holds only on a fragment from which some sentences about the definition itself have been removed - and those sentences are no longer judged by it.", "For a system's own provability the result is even harsher: a formal system that proves that everything provable in it is true (Pr(⌜φ⌝) → φ for every φ) proves everything (Löb).", "Hence truth cannot be defined by any means of the language in which it serves as the measure. It is a semantic primitive as a position: in its own language, the undefinable measure of assertion; in the metalanguage, a definable object, while the measure of the metalanguage itself is, there, once again undefinable."],
     },
     board: "ITMO",
   },
