@@ -10,6 +10,11 @@ export const FADE = .14;
 export const SLEEP_IN = .48;
 export const SLEEP_OUT = .92;
 const REST = .25;
+// The first chapter is driven by scroll too: he lies in bed until WAKE_IN, is on his feet by WAKE_OUT
+// (the chapter's resting point) and stretches until the caption starts to leave (HOLD - FADE).
+export const WAKE_IN = .02;
+export const WAKE_OUT = REST;
+export const STRETCH_OUT = HOLD - FADE;
 const IDLE_MS = 120;
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));

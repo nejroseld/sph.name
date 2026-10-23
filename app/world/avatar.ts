@@ -80,7 +80,13 @@ export function createAvatar(k: ModelKit, parent: THREE.Object3D) {
   cylinder(body,.079,.092,.19,[0,2.265,0],skin);
 
   const head=group(body,[0,2.51,0]);
-  loft(head,[[-.255,0,0],[-.243,.075,.094,.015],[-.202,.12,.13,.005],[-.12,.173,.162],[0,.195,.185],[.11,.185,.18],[.22,.151,.144],[.26,.07,.07],[.27,0,0]],skin);
+  // Extra level at cheekbone height keeps the face full under the eyes before tapering to the chin.
+  loft(head,[[-.255,0,0],[-.243,.075,.094,.015],[-.202,.12,.13,.005],[-.12,.173,.162],[-.05,.193,.179],[0,.195,.185],[.11,.185,.18],[.22,.151,.144],[.26,.07,.07],[.27,0,0]],skin);
+  // Cheekbones: soft zygomatic bulge just below the eyes, angled out toward the ears.
+  for(const s of [-1,1]) {
+    const cheek=sphere(head,[.048,.034,.052],[s*.128,-.042,.100],skin);cheek.rotation.y=s*.55;
+    sphere(head,[.026,.022,.030],[s*.150,-.026,.082],skin);
+  }
   for(const s of [-1,1]) {
     sphere(head,[.032,.06,.029],[s*.196,-.002,-.008],skin);
     sphere(head,[.014,.034,.016],[s*.216,-.002,.01],lips);
@@ -104,9 +110,18 @@ export function createAvatar(k: ModelKit, parent: THREE.Object3D) {
 
   // Short sides, swept fringe, soft strand detail — no helmet silhouette.
   sphere(head,[.19,.122,.178],[0,.212,-.026],hair);
+  // Back of the head: occiput mass, lower nape layer and tapered strands so the crown reads as hair, not scalp.
+  sphere(head,[.178,.19,.117],[0,.07,-.09],hair);
+  sphere(head,[.148,.125,.098],[0,-.05,-.1],hair);
+  for(let i=0;i<7;i++) {
+    const x=-.135+i*.045;
+    curve(head,[[x,.25,-.13],[x*.95,.12,-.212],[x*.85,0,-.2],[x*.6,-.1,-.172],[x*.35,-.15,-.15]],.015+(i%2)*.003,i%3===1?hairLight:hair);
+  }
   for(const s of [-1,1]) {
     sphere(head,[.035,.106,.11],[s*.169,.13,-.074],hair);
     curve(head,[[s*.178,.02,-.03],[s*.183,.12,-.066],[s*.141,.25,-.07]],.022,hair);
+    // Behind the ear: hair tapers down toward the nape instead of stopping in a hard line.
+    curve(head,[[s*.176,.09,-.088],[s*.162,-.02,-.13],[s*.128,-.1,-.152],[s*.08,-.15,-.15]],.02,hair);
   }
   for(let i=0;i<13;i++) {
     const t=i/12;

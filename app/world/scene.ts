@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { createAvatar } from "./avatar";
-import { TRACK_END, HOLD, SETTLE, FADE, SLEEP_IN, SLEEP_OUT, createAutoSnap, restPoint } from "./track";
+import { TRACK_END, HOLD, SETTLE, FADE, SLEEP_IN, SLEEP_OUT, WAKE_IN, WAKE_OUT, STRETCH_OUT, createAutoSnap, restPoint } from "./track";
 
 type Parent = THREE.Object3D;
 type V3 = [number, number, number];
@@ -249,7 +249,9 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
   mount.addEventListener("pointerdown",onDown);mount.addEventListener("pointermove",onMove);mount.addEventListener("pointerup",onUp);mount.addEventListener("pointercancel",onUp);mount.addEventListener("pointerleave",onLeave);renderer.domElement.addEventListener("webglcontextlost",contextLost);window.addEventListener("scroll",sampleScroll,{passive:true});window.addEventListener("resize",resize);
   const poseAt=(i:number,time:number,local:number):Pose=>{
     const b=poses[i];const p:Pose={...b,p:[...b.p],arms:[...b.arms],elbows:[...b.elbows],spread:[...b.spread],thighs:[...b.thighs],knees:[...b.knees]};
-    if(i===0){const wake=smooth(.9,4.0,arrival);p.p=[mix(-.88,.56,wake),mix(.76,.04,wake),mix(1.02,.62,wake)];p.lean=mix(-Math.PI/2,0,wake);const stretch=Math.sin(smooth(4.1,6.5,arrival)*Math.PI);p.spread=[-.07-stretch*.8,.07+stretch*.8];p.head=-stretch*.08;}
+    // Getting up is scroll-driven: the pose depends only on where the page is, so it never plays on its own and
+    // is already complete (and stays put) for the whole walk into the next chapter.
+    if(i===0){const wake=smooth(WAKE_IN,WAKE_OUT,local);p.p=[mix(-.88,.56,wake),mix(.76,.04,wake),mix(1.02,.62,wake)];p.lean=mix(-Math.PI/2,0,wake);const stretch=Math.sin(smooth(WAKE_OUT,STRETCH_OUT,local)*Math.PI);p.spread=[-.07-stretch*.8,.07+stretch*.8];p.head=-stretch*.08;}
     if(i===1){const walk=Math.sin(time*4.7);p.thighs=[walk*.42,-walk*.42];p.knees=[Math.max(0,-walk)*.58,Math.max(0,walk)*.58];p.arms=[-walk*.32,walk*.32];p.p[1]+=(1-Math.cos(time*9.4))*.018;p.p[0]+=Math.sin(time*.32)*.08;}
     if(i===2){p.head+=Math.sin(time*.6)*.045;p.elbows[0]+=Math.sin(time*1.1)*.025;}
     if(i===3||i===4){p.elbows[0]+=Math.sin(time*7.9)*.035;p.elbows[1]+=Math.sin(time*9.1+1)*.035;p.head+=Math.sin(time*.8)*.035;}
@@ -296,7 +298,7 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
     head.rotation.set(mix(a.head,b.head,f),motion?Math.sin(t*.47)*.035:0,motion?Math.sin(t*.7)*.009:0);
     body.scale.y=1+(motion?Math.sin(t*1.75)*.0024:0);
     const sleeping=index===6&&local>SLEEP_OUT;
-    const shut=(index===0&&arrival<1.0&&motion)||sleeping;
+    const shut=progress<WAKE_IN+.06||sleeping;
     const blink=shut?.10:(motion&&Math.sin(t*1.29)>.995?.12:1);eyes.forEach(e=>e.scale.y=blink);
     avatar.setOutfit(index===0||index===6?0:index===1?2:index===5?3:1);heldBook.visible=index===2;dumbbells.forEach(d=>d.visible=index===5);
     const sleepingDim=(i===6?smooth(SLEEP_IN,SLEEP_OUT,local):0)*(1-dawn);

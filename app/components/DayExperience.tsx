@@ -12,7 +12,7 @@ type World = { destroy():void; setMotion(value:boolean):void; setBlocked(value:b
 const chapters = [
   { id:"morning", name:"Подъём", time:"07:00", title:"Степан.", action:null, actionLabel:"" },
   { id:"city", name:"По пути", time:"08:10", title:"Мысли по пути.", action:"philosophy", actionLabel:"Философия" },
-  { id:"learn", name:"Учёба", time:"09:40", title:"Хочу понять,\nкак это работает.", action:null, actionLabel:"" },
+  { id:"learn", name:"Учёба", time:"09:40", title:"Линал,forever.", action:null, actionLabel:"" },
   { id:"build", name:"Проекты", time:"14:00", title:"В работе.", action:"projects", actionLabel:"Проекты" },
   { id:"security", name:"Безопасность", time:"17:30", title:"Безопасность.", action:null, actionLabel:"" },
   { id:"gym", name:"Зал", time:"20:00", title:"Ещё подход.", action:null, actionLabel:"" },
@@ -142,7 +142,7 @@ export default function DayExperience() {
       <div className={`world-label ${active===0?"intro-label":""}`} ref={label}>
         {active===0?<h1>Степан.</h1>:<h2>{current.title}</h2>}
         {active===4&&<span className="quiet-meta">CTF / AppSec</span>}
-        {active===2&&<span className="quiet-meta">ИТМО</span>}
+        {active===2&&<span className="quiet-meta">ITMO AI ENGINEERING</span>}
       </div>
       {current.action&&<button className="world-hotspot" ref={hotspot} onClick={()=>openPanel(current.action as Panel)}><span className="hotspot-node"><Plus size={13}/></span><span>{current.actionLabel}</span></button>}
       {sleeping&&!motion&&<button className="new-day-button" onClick={()=>{window.scrollTo({top:0,behavior:"instant"});world.current?.restart();}}>Новый день</button>}
