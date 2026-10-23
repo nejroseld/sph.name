@@ -20,7 +20,7 @@ export const copy = {
       { id:"night", name:"Перед сном", time:"23:00", title:"Ещё одна мысль.", action:"philosophy", actionLabel:"Открыть заметки" },
     ] as Chapter[],
     projects: [
-      { title:"Этот сайт", type:"Интерактивный 3D-день", status:"В процессе", text:"Пробую рассказать о себе через движение, пространство и маленькие сцены из жизни.", href:null },
+      { title:"Этот сайт", type:"Интерактивный 3D-день", status:"", text:"Вы тут.", href:null },
       { title:"Sync & MCP", type:"Инструменты для Obsidian", status:"Ранняя версия", text:"Синхронизация заметок и доступ к ним через MCP. Проект ещё меняется.", href:obsidian },
     ] as Project[],
     ui: {
@@ -52,7 +52,7 @@ export const copy = {
       { id:"night", name:"Before sleep", time:"23:00", title:"One more thought.", action:"philosophy", actionLabel:"Open notes" },
     ] as Chapter[],
     projects: [
-      { title:"This site", type:"An interactive 3D day", status:"In progress", text:"An attempt to tell about myself through motion, space and small scenes from everyday life.", href:null },
+      { title:"This site", type:"An interactive 3D day", status:"", text:"You are here.", href:null },
       { title:"Sync & MCP", type:"Tools for Obsidian", status:"Early version", text:"Note syncing and access to notes over MCP. The project is still changing.", href:obsidian },
     ] as Project[],
     ui: {
