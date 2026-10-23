@@ -32,17 +32,21 @@ export function createAvatar(k: ModelKit, parent: THREE.Object3D) {
   const sole = mat("#e4e7e7", .83);
 
   // Elliptical cross sections give the body, face and clothing an organic silhouette.
-  const loft = (parent: THREE.Object3D, levels: [number, number, number, number?][], material: THREE.Material, p: Vec3 = [0,0,0]) => {
+  const loft = (parent: THREE.Object3D, levels: [number, number, number, number?][], material: THREE.Material, p: Vec3 = [0,0,0], sculpt?: (x: number, y: number, z: number) => number) => {
     const positions: number[] = [], indices: number[] = [];
     const segments = 40;
     levels.forEach(([y,rx,rz,shift=0], row) => {
       for(let j=0;j<=segments;j++) {
         const a=j/segments*Math.PI*2;
-        positions.push(Math.sin(a)*rx,y,Math.cos(a)*rz+shift);
+        const x=Math.sin(a)*rx,z=Math.cos(a)*rz+shift,d=sculpt?sculpt(x,y,z):0,r=Math.hypot(x,z)||1;
+        positions.push(x+x/r*d,y,z+z/r*d);
         if(row && j<segments) {const b=row*(segments+1)+j;indices.push(b,b-segments-1,b+1,b+1,b-segments-1,b-segments);}
       }
     });
     const geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.Float32BufferAttribute(positions,3));geo.setIndex(indices);geo.computeVertexNormals();
+    // The first and last column share a position; average their normals so the front has no shading seam.
+    const n=geo.getAttribute("normal");
+    for(let row=0;row<levels.length;row++){const a=row*(segments+1),b=a+segments;const v=new THREE.Vector3().fromBufferAttribute(n,a).add(new THREE.Vector3().fromBufferAttribute(n,b)).normalize();n.setXYZ(a,v.x,v.y,v.z);n.setXYZ(b,v.x,v.y,v.z);}
     geometries.set(`avatar-loft-${geometries.size}`,geo);
     return mesh(geo,material,parent,p);
   };
@@ -80,13 +84,11 @@ export function createAvatar(k: ModelKit, parent: THREE.Object3D) {
   cylinder(body,.079,.092,.19,[0,2.265,0],skin);
 
   const head=group(body,[0,2.51,0]);
-  // Extra level at cheekbone height keeps the face full under the eyes before tapering to the chin.
-  loft(head,[[-.255,0,0],[-.243,.075,.094,.015],[-.202,.12,.13,.005],[-.12,.173,.162],[-.05,.193,.179],[0,.195,.185],[.11,.185,.18],[.22,.151,.144],[.26,.07,.07],[.27,0,0]],skin);
-  // Cheekbones: soft zygomatic bulge just below the eyes, angled out toward the ears.
-  for(const s of [-1,1]) {
-    const cheek=sphere(head,[.048,.034,.052],[s*.128,-.042,.100],skin);cheek.rotation.y=s*.55;
-    sphere(head,[.026,.022,.030],[s*.150,-.026,.082],skin);
-  }
+  // Cheekbones, the hollow under them and the jaw angles are pushed into the head surface itself, so they read
+  // as structure of one smooth form rather than separate pieces.
+  const bump=(x:number,y:number,z:number,cx:number,cy:number,cz:number,sx:number,sy:number,sz:number)=>Math.exp(-((x-cx)**2/sx**2+(y-cy)**2/sy**2+(z-cz)**2/sz**2));
+  const face=(x:number,y:number,z:number)=>{const ax=Math.abs(x);return .02*bump(ax,y,z,.14,-.02,.125,.05,.03,.06)-.011*bump(ax,y,z,.125,-.09,.13,.04,.03,.06)+.016*bump(ax,y,z,.165,-.185,.06,.05,.04,.08)+.006*bump(ax,y,z,0,-.225,.15,.06,.025,.05);};
+  loft(head,[[-.258,0,0,.02],[-.25,.09,.09,.02],[-.218,.142,.13,.01],[-.19,.162,.145,.005],[-.16,.172,.155],[-.13,.178,.163],[-.1,.182,.169],[-.07,.188,.174],[-.04,.196,.179],[-.01,.198,.182],[.02,.197,.185],[.06,.193,.183],[.11,.185,.18],[.16,.172,.168],[.22,.151,.144],[.26,.07,.07],[.27,0,0]],skin,[0,0,0],face);
   for(const s of [-1,1]) {
     sphere(head,[.032,.06,.029],[s*.196,-.002,-.008],skin);
     sphere(head,[.014,.034,.016],[s*.216,-.002,.01],lips);
@@ -106,7 +108,6 @@ export function createAvatar(k: ModelKit, parent: THREE.Object3D) {
   for(const s of [-1,1])sphere(head,[.007,.004,.006],[s*.021,-.040,.222],lips);
   curve(head,[[-.052,-.107,.154],[-.019,-.100,.175],[0,-.104,.178],[.018,-.101,.175],[.052,-.107,.154]],.006,lips);
   sphere(head,[.042,.010,.013],[0,-.120,.166],lips);
-  sphere(head,[.079,.027,.028],[0,-.180,.132],skin);
 
   // Short sides, swept fringe, soft strand detail — no helmet silhouette.
   sphere(head,[.19,.122,.178],[0,.212,-.026],hair);
@@ -140,7 +141,8 @@ export function createAvatar(k: ModelKit, parent: THREE.Object3D) {
   for(const s of [-1,1]) {
     const shoulder=group(body,[s*.391,2.02,0]);shoulders.push(shoulder);
     sphere(shoulder,[.113,.154,.115],[0,-.09,0],skin);
-    loft(shoulder,[[-.42,0,0],[-.41,.072,.074],[-.32,.083,.083],[-.13,.104,.105],[.015,.095,.09],[.07,0,0]],skin);
+    // The skin cap stays well inside the sleeve dome so the cut end of the arm never shows through clothing.
+    loft(shoulder,[[-.42,0,0],[-.41,.072,.074],[-.32,.083,.083],[-.13,.104,.105],[-.01,.092,.088],[.035,0,0]],skin);
     const elbow=group(shoulder,[0,-.414,0]);elbows.push(elbow);
     sphere(elbow,[.076,.071,.075],[0,0,0],skin);
     loft(elbow,[[-.38,0,0],[-.37,.044,.055],[-.21,.073,.076],[-.06,.076,.081],[.025,0,0]],skin);
@@ -158,7 +160,8 @@ export function createAvatar(k: ModelKit, parent: THREE.Object3D) {
       const up=group(shoulder),low=group(elbow),leg=group(thigh),shin=group(knee),shoe=group(knee);
       parts.upper.push(up);parts.lower.push(low);parts.thigh.push(leg);parts.shin.push(shin);parts.shoe.push(shoe);
       const cloth=[violet,polo,shell,black][outfit];
-      if(outfit!==3) loft(up,[[outfit===1?-.235:-.425,0,0],[outfit===1?-.230:-.420,.106,.114],[-.15,.125,.127],[.016,.12,.12],[.071,0,0]],cloth);
+      // Sleeves end in a rounded dome over the shoulder joint instead of a flat cone.
+      if(outfit!==3) loft(up,[[outfit===1?-.235:-.425,0,0],[outfit===1?-.230:-.420,.106,.114],[-.15,.125,.127],[.016,.124,.124],[.05,.108,.108],[.075,.072,.072],[.088,0,0]],cloth);
       if(outfit===0||outfit===2) {
         loft(low,[[-.365,0,0],[-.36,.067,.073],[-.31,.09,.091],[-.1,.098,.10],[.03,.102,.11],[.04,0,0]],cloth);
         cylinder(low,.072,.071,.05,[0,-.354,0],outfit===0?violetDark:black).scale.z=1.06;

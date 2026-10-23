@@ -139,7 +139,9 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
     for(let i=0;i<2;i++)box(g,[.05,h-.2,.045],[(i-.5)*(w-.13),h/2,.48],C.white,.006);
     return g;};
   building(-1.76,1.13,2.6,C.warm,3);building(-.20,1.47,3.18,C.cream,4);building(1.30,1.14,2.28,mat("#d6ad9a"),3);
-  const roof=cylinder(city,.68,.8,.28,[-.2,3.35,-1.28],C.dark,4);roof.rotation.y=Math.PI/4;roof.scale.z=.65;
+  // Hip roof: the 4-sided cylinder is turned square to the facade inside a group, and the group is stretched to the
+  // cornice footprint, so the roof stays a rectangle aligned with the building instead of a skewed rhombus.
+  const roof=group(city,[-.2,3.41,-1.28]);roof.scale.set(.74*Math.SQRT2,1,.47*Math.SQRT2);cylinder(roof,.6,1,.28,[0,0,0],C.dark,4).rotation.y=Math.PI/4;
   cylinder(city,.022,.029,.65,[-.2,3.78,-1.28],C.steel);sphere(city,[.05,.05,.05],[-.2,4.13,-1.28],C.lime);
   const streetlamp=group(city,[-2.24,0,.56]);cylinder(streetlamp,.065,.10,.16,[0,.08,0],C.dark);cylinder(streetlamp,.028,.045,1.85,[0,1,0],C.dark);box(streetlamp,[.25,.32,.25],[0,2.01,0],C.warm,.04);cylinder(streetlamp,.19,.17,.10,[0,2.22,0],C.dark,4);
   const tree=group(city,[2.24,0,.50]);cylinder(tree,.06,.085,1.20,[0,.6,0],C.wood);sphere(tree,[.48,.60,.48],[0,1.50,0],C.green);sphere(tree,[.36,.42,.37],[-.19,1.67,.08],C.lime);cylinder(tree,.40,.40,.045,[0,.04,0],C.dark);
