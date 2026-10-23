@@ -6,25 +6,12 @@ import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetClose } from "@
 import type { WorldFrame } from "../world/scene";
 import { TRACK_END, restPoint, progressToScroll, scrollToProgress } from "../world/track";
 import posterFrames from "../world/poster-frames.json";
+import { copy as dictionary, type Locale } from "./copy";
 
 type Panel = "projects" | "philosophy" | "contact" | null;
 type World = { destroy():void; setMotion(value:boolean):void; setBlocked(value:boolean):void; reset():void; restart():void; goTo(chapter:number):void };
-const chapters = [
-  { id:"morning", name:"Подъём", time:"07:00", title:"Степан.", action:null, actionLabel:"" },
-  { id:"city", name:"По пути", time:"08:10", title:"Мысли по пути.", action:"philosophy", actionLabel:"Философия" },
-  { id:"learn", name:"Учёба", time:"09:40", title:"Линал,forever.", action:null, actionLabel:"" },
-  { id:"build", name:"Проекты", time:"14:00", title:"В работе.", action:"projects", actionLabel:"Проекты" },
-  { id:"security", name:"Безопасность", time:"17:30", title:"Безопасность.", action:null, actionLabel:"" },
-  { id:"gym", name:"Зал", time:"20:00", title:"Ещё подход.", action:null, actionLabel:"" },
-  { id:"night", name:"Перед сном", time:"23:00", title:"Ещё одна мысль.", action:"philosophy", actionLabel:"Открыть заметки" },
-] as const;
-
-const projects = [
-  { title:"Этот сайт", type:"Интерактивный 3D-день", status:"В процессе", text:"Пробую рассказать о себе через движение, пространство и маленькие сцены из жизни.", href:null },
-  { title:"Sync & MCP", type:"Инструменты для Obsidian", status:"Ранняя версия", text:"Синхронизация заметок и доступ к ним через MCP. Проект ещё меняется.", href:"https://community.obsidian.md/plugins/sync-and-mcp" },
-];
-
-export default function DayExperience() {
+export default function DayExperience({ locale = "ru" }: { locale?: Locale }) {
+  const t=dictionary[locale];const {chapters,projects,ui,note}=t;
   const mount=useRef<HTMLDivElement>(null);
   const root=useRef<HTMLElement>(null);
   const label=useRef<HTMLDivElement>(null);
@@ -88,12 +75,12 @@ export default function DayExperience() {
     frameHandler.current=onFrame;loopHandler.current=onLoop;
     import("../world/scene").then(({createWorld})=>{
       if(!alive||!mount.current)return;
-      world.current=createWorld(mount.current,!media.matches,()=>{if(alive)setFailed(true);},{onFrame});setReady(true);
+      world.current=createWorld(mount.current,!media.matches,()=>{if(alive)setFailed(true);},{onFrame,board:t.board});setReady(true);
     }).catch(error=>{console.error("3D initialization failed",error);if(alive)setFailed(true);});
     const preference=()=>{setMotion(!media.matches);flags.current.motion=!media.matches;world.current?.setMotion(!media.matches);};
     media.addEventListener("change",preference);
     return()=>{alive=false;world.current?.destroy();world.current=null;timers.current.forEach(clearTimeout);media.removeEventListener("change",preference);};
-  },[]);
+  },[t.board]);
 
   useEffect(()=>{
     if(!failed)return;
@@ -113,7 +100,7 @@ export default function DayExperience() {
     };
     update();window.addEventListener("scroll",update,{passive:true});window.addEventListener("resize",update);const interval=setInterval(update,120);
     return()=>{clearInterval(interval);window.removeEventListener("scroll",update);window.removeEventListener("resize",update);};
-  },[failed]);
+  },[failed,chapters]);
 
   useEffect(()=>{flags.current.panel=panel;world.current?.setBlocked(!!panel||flags.current.closing);},[panel]);
   const go=(index:number)=>{
@@ -122,50 +109,50 @@ export default function DayExperience() {
     else window.scrollTo({top:progressToScroll(restPoint(index)),behavior:motion?"smooth":"instant"});
   };
   const toggleMotion=()=>{const next=!motion;setMotion(next);flags.current.motion=next;world.current?.setMotion(next);};
-  const copy=async()=>{try{await navigator.clipboard.writeText("dev@stfn.uk");setCopyFailed(false);setCopied(true);timers.current.push(setTimeout(()=>setCopied(false),2000));}catch{setCopyFailed(true);}};
+  const copy=async()=>{try{await navigator.clipboard.writeText(t.email);setCopyFailed(false);setCopied(true);timers.current.push(setTimeout(()=>setCopied(false),2000));}catch{setCopyFailed(true);}};
   const openPanel=(next:Panel)=>{panelTrigger.current=document.activeElement as HTMLElement;setReadNote(false);setProject(null);setPanel(next);};
   const current=chapters[active];
   const dark=active===4||active===6;
 
   return (
     <main ref={root} className={`experience ${dark?"is-dark":""} ${!motion?"is-still":""} ${failed?"is-static":""}`} data-scene={current.id}>
-      <a className="skip-link" href="#contact" onClick={e=>{e.preventDefault();openPanel("contact");}}>Контакты</a>
-      <div className="world" ref={mount} aria-label={`3D-сцена: ${current.name}`} />
+      <a className="skip-link" href="#contact" onClick={e=>{e.preventDefault();openPanel("contact");}}>{ui.skip}</a>
+      <div className="world" ref={mount} aria-label={`${ui.scene}: ${current.name}`} />
       <div className="vignette" aria-hidden="true" />
       <div className={`day-veil ${closing?"is-closed":""}`} aria-hidden="true" />
       <header className="site-header">
-        <button className="wordmark" onClick={()=>go(0)} aria-label="В начало дня">sph<span>.</span></button>
-        <nav className="header-links" aria-label="Материалы"><button onClick={()=>openPanel("projects")}>Проекты</button><button onClick={()=>openPanel("philosophy")}>Тексты</button><button onClick={()=>openPanel("contact")}>Контакт</button></nav>
+        <button className="wordmark" onClick={()=>go(0)} aria-label={ui.home}>sph<span>.</span></button>
+        <nav className="header-links" aria-label={ui.materials}><button onClick={()=>openPanel("projects")}>{ui.projects}</button><button onClick={()=>openPanel("philosophy")}>{ui.writing}</button><button onClick={()=>openPanel("contact")}>{ui.contact}</button><a className="lang-switch" href={t.other.href} hrefLang={t.other.href==="/"?"ru":"en"} aria-label={t.other.aria}>{t.other.label}</a></nav>
       </header>
-      {!ready&&!failed&&<div className="loading" role="status"><LoaderCircle size={21}/><span>Свет включается…</span></div>}
-      {failed&&<><picture className="scene-poster"><source media="(max-width:759px)" srcSet={`/scene-posters/${sleeping?"sleep":current.id}-mobile.webp`}/><img src={`/scene-posters/${sleeping?"sleep":current.id}.webp`} alt=""/></picture><span className="static-hint" role="status">Статичный режим</span></>}
+      {!ready&&!failed&&<div className="loading" role="status"><LoaderCircle size={21}/><span>{ui.loading}</span></div>}
+      {failed&&<><picture className="scene-poster"><source media="(max-width:759px)" srcSet={`/scene-posters/${sleeping?"sleep":current.id}-mobile.webp`}/><img src={`/scene-posters/${sleeping?"sleep":current.id}.webp`} alt=""/></picture><span className="static-hint" role="status">{ui.still}</span></>}
       <div className={`world-label ${active===0?"intro-label":""}`} ref={label}>
-        {active===0?<h1>Степан.</h1>:<h2>{current.title}</h2>}
+        {active===0?<h1>{ui.intro}</h1>:<h2>{current.title}</h2>}
         {active===4&&<span className="quiet-meta">CTF / AppSec</span>}
         {active===2&&<span className="quiet-meta">ITMO AI ENGINEERING</span>}
       </div>
       {current.action&&<button className="world-hotspot" ref={hotspot} onClick={()=>openPanel(current.action as Panel)}><span className="hotspot-node"><Plus size={13}/></span><span>{current.actionLabel}</span></button>}
-      {sleeping&&!motion&&<button className="new-day-button" onClick={()=>{window.scrollTo({top:0,behavior:"instant"});world.current?.restart();}}>Новый день</button>}
+      {sleeping&&!motion&&<button className="new-day-button" onClick={()=>{window.scrollTo({top:0,behavior:"instant"});world.current?.restart();}}>{ui.newDay}</button>}
       <div className="scroll-track" aria-hidden="true" />
       <footer className="day-footer">
         <div className="scene-clock" key={current.id}><span>{current.time}</span><span className="clock-divider"/><span>{current.name}</span></div>
-        <nav className="day-nav" aria-label="Главы дня">{chapters.map((chapter,i)=><button key={chapter.id} onClick={()=>go(i)} aria-label={`${chapter.name}, ${chapter.time}`} aria-current={i===active?"step":undefined} className={i===active?"active":""}><i/><span>{chapter.name}</span></button>)}</nav>
-        <div className="scene-controls"><span className="scroll-cue">{active===0?"Листай вниз":active===6?"День замыкается":""}</span><button onClick={toggleMotion} aria-label={motion?"Остановить анимацию":"Включить анимацию"} aria-pressed={!motion}>{motion?<Pause size={15}/>:<Play size={15}/>}</button>{!failed&&<button onClick={()=>world.current?.reset()} aria-label="Вернуть ракурс"><RotateCcw size={15}/></button>}</div>
+        <nav className="day-nav" aria-label={ui.chapters}>{chapters.map((chapter,i)=><button key={chapter.id} onClick={()=>go(i)} aria-label={`${chapter.name}, ${chapter.time}`} aria-current={i===active?"step":undefined} className={i===active?"active":""}><i/><span>{chapter.name}</span></button>)}</nav>
+        <div className="scene-controls"><span className="scroll-cue">{active===0?ui.scrollDown:active===6?ui.dayCloses:""}</span><button onClick={toggleMotion} aria-label={motion?ui.pause:ui.play} aria-pressed={!motion}>{motion?<Pause size={15}/>:<Play size={15}/>}</button>{!failed&&<button onClick={()=>world.current?.reset()} aria-label={ui.resetView}><RotateCcw size={15}/></button>}</div>
         <div className="reading-progress" aria-hidden="true"><div ref={progressBar}/></div>
       </footer>
       <div className="sr-only" aria-live="polite">{current.name}</div>
       <Sheet open={panel!==null} onOpenChange={open=>{if(!open)setPanel(null);}}>
         <SheetContent className="folio-sheet" showCloseButton={false} onCloseAutoFocus={e=>{e.preventDefault();if(!flags.current.panel)panelTrigger.current?.focus();}}>
-          <div className="folio-top"><span className="folio-number">{panel==="projects"?"01":panel==="philosophy"?"02":"03"}</span><SheetClose className="folio-close" aria-label="Закрыть"><X size={21}/></SheetClose></div>
-          <SheetTitle className="folio-title">{panel==="projects"?"Проекты.":panel==="philosophy"?"Философия.":"На связи."}</SheetTitle>
-          <SheetDescription className="sr-only">{panel==="projects"?"Список проектов и подробности":panel==="philosophy"?"Философские заметки":"Контактный адрес"}</SheetDescription>
-          {panel==="projects"&&<div className="project-list">{projects.map((item,i)=><article key={item.title} className={`project-row ${project===i?"expanded":""}`}><button className="project-toggle" onClick={()=>setProject(project===i?null:i)} aria-expanded={project===i}><span className="item-index">0{i+1}</span><span><strong>{item.title}</strong><small>{item.type}</small></span>{project===i?<Minus size={19}/>:<Plus size={19}/>}</button>{project===i&&<div className="project-detail"><span className="item-status">{item.status}</span><p>{item.text}</p>{item.href&&<a href={item.href} target="_blank" rel="noreferrer">Страница проекта</a>}</div>}</article>)}</div>}
-          {panel==="philosophy"&&<div className="notes">{!readNote?<button className="note-row" onClick={()=>setReadNote(true)}><span className="item-index">01</span><span><strong>Истина как примитив</strong><small>Рабочая заметка · 03.10.2026</small></span><Plus size={19}/></button>:<article className="note-reading"><button className="back-to-notes" onClick={()=>setReadNote(false)}>Все заметки</button><p className="item-status">Рабочий тезис / 03.10.2026</p><h3>Истина как примитив</h3><p className="note-lead">Можно ли определить истину, не используя её в самом определении?</p><p>В этой теории истина принимается как семантический примитив.</p><p>Любое определение имеет форму утверждения P. Но утверждать P — уже значит претендовать на истинность P. Получается, понятие истины присутствует в основании самого определения.</p><p className="note-end">Отправная точка для дальнейшего разбора.</p></article>}</div>}
-          {panel==="contact"&&<div className="contact-panel"><a href="mailto:dev@stfn.uk">dev@stfn.uk</a><button onClick={copy} aria-label={copied?"Адрес скопирован":"Скопировать адрес"}>{copied?<Check size={20}/>:<Copy size={20}/>}</button><span role="status">{copied?"Скопировано":copyFailed?"Выдели адрес, чтобы скопировать вручную":""}</span></div>}
-          <div className="folio-bottom">Степан / Санкт-Петербург</div>
+          <div className="folio-top"><span className="folio-number">{panel==="projects"?"01":panel==="philosophy"?"02":"03"}</span><SheetClose className="folio-close" aria-label={ui.close}><X size={21}/></SheetClose></div>
+          <SheetTitle className="folio-title">{panel?ui.titles[panel]:""}</SheetTitle>
+          <SheetDescription className="sr-only">{panel?ui.descriptions[panel]:""}</SheetDescription>
+          {panel==="projects"&&<div className="project-list">{projects.map((item,i)=><article key={item.title} className={`project-row ${project===i?"expanded":""}`}><button className="project-toggle" onClick={()=>setProject(project===i?null:i)} aria-expanded={project===i}><span className="item-index">0{i+1}</span><span><strong>{item.title}</strong><small>{item.type}</small></span>{project===i?<Minus size={19}/>:<Plus size={19}/>}</button>{project===i&&<div className="project-detail"><span className="item-status">{item.status}</span><p>{item.text}</p>{item.href&&<a href={item.href} target="_blank" rel="noreferrer">{ui.projectPage}</a>}</div>}</article>)}</div>}
+          {panel==="philosophy"&&<div className="notes">{!readNote?<button className="note-row" onClick={()=>setReadNote(true)}><span className="item-index">01</span><span><strong>{note.title}</strong><small>{note.meta}</small></span><Plus size={19}/></button>:<article className="note-reading"><button className="back-to-notes" onClick={()=>setReadNote(false)}>{note.all}</button><p className="item-status">{note.status}</p><h3>{note.title}</h3><p className="note-lead">{note.lead}</p>{note.body.map(text=><p key={text}>{text}</p>)}<p className="note-end">{note.end}</p></article>}</div>}
+          {panel==="contact"&&<div className="contact-panel"><a href={`mailto:${t.email}`}>{t.email}</a><button onClick={copy} aria-label={copied?ui.copied:ui.copyAddress}>{copied?<Check size={20}/>:<Copy size={20}/>}</button><span role="status">{copied?ui.copiedStatus:copyFailed?ui.copyManually:""}</span></div>}
+          <div className="folio-bottom">{ui.footer}</div>
         </SheetContent>
       </Sheet>
-      <noscript><div className="no-js"><h1>Степан.</h1><p>ИТМО. Разработка. Безопасность. Философия.</p><p>Для 3D-истории включи JavaScript.</p><a href="mailto:dev@stfn.uk">dev@stfn.uk</a></div></noscript>
+      <noscript><div className="no-js"><h1>{ui.intro}</h1><p>{ui.tagline}</p><p>{ui.noJs}</p><a href={`mailto:${t.email}`}>{t.email}</a></div></noscript>
     </main>
   );
 }

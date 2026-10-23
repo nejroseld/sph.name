@@ -8,7 +8,7 @@ type Parent = THREE.Object3D;
 type V3 = [number, number, number];
 type Pose = { p: V3; yaw: number; lean: number; arms: [number, number]; elbows: [number, number]; spread: [number, number]; thighs: [number, number]; knees: [number, number]; head: number };
 export type WorldFrame = { index: number; progress: number; enter: number; leave: number; anchor: [number,number]; detail: [number,number]; opacity: number; night: number; sleeping: boolean };
-export type WorldOptions = { onFrame?: (state:WorldFrame)=>void };
+export type WorldOptions = { onFrame?: (state:WorldFrame)=>void; board?: string };
 const TAU = Math.PI * 2;
 const mix = THREE.MathUtils.lerp;
 const smooth = (a:number,b:number,x:number)=>THREE.MathUtils.smoothstep(x,a,b);
@@ -150,7 +150,7 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
   // 03 — Mathematics on a board and a book in hand.
   const learn=sets[2];
   const board=group(learn,[.65,1.90,-1.29]);box(board,[2.80,1.57,.13],[0,0,0],C.wood,.04);box(board,[2.66,1.43,.04],[0,0,.086],C.dark,.017);
-  const mathTexture=texture(1024,512,ctx=>{ctx.fillStyle="#263a31";ctx.fillRect(0,0,1024,512);ctx.fillStyle="#d7ff8a";ctx.font="bold 58px sans-serif";ctx.fillText("ИТМО",50,85);ctx.fillStyle="#e7eee0";ctx.font="42px monospace";ctx.fillText("f(x) = Wx + b",55,178);ctx.fillText("∇L(θ) → 0",55,250);ctx.font="28px monospace";ctx.fillStyle="#a8b9a8";ctx.fillText("",55,435);ctx.strokeStyle="#a5c679";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(570,370);ctx.lineTo(570,150);ctx.moveTo(550,350);ctx.lineTo(940,350);ctx.stroke();ctx.strokeStyle="#d7ff8a";ctx.lineWidth=5;ctx.beginPath();for(let i=0;i<180;i++){const x=580+i*1.9,y=335-Math.pow(i/180,2)*175;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();});
+  const mathTexture=texture(1024,512,ctx=>{ctx.fillStyle="#263a31";ctx.fillRect(0,0,1024,512);ctx.fillStyle="#d7ff8a";ctx.font="bold 58px sans-serif";ctx.fillText(options.board??"ИТМО",50,85);ctx.fillStyle="#e7eee0";ctx.font="42px monospace";ctx.fillText("f(x) = Wx + b",55,178);ctx.fillText("∇L(θ) → 0",55,250);ctx.font="28px monospace";ctx.fillStyle="#a8b9a8";ctx.fillText("",55,435);ctx.strokeStyle="#a5c679";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(570,370);ctx.lineTo(570,150);ctx.moveTo(550,350);ctx.lineTo(940,350);ctx.stroke();ctx.strokeStyle="#d7ff8a";ctx.lineWidth=5;ctx.beginPath();for(let i=0;i<180;i++){const x=580+i*1.9,y=335-Math.pow(i/180,2)*175;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();});
   panel(board,2.56,1.29,[0,0,.113],mathTexture);box(board,[2.90,.06,.24],[0,-.77,.08],C.cream,.015);
   for(const x of [-.44,1.74])box(learn,[.075,1.3,.09],[x,.65,-1.33],C.steel,.02);
   const books=group(learn,[1.92,0,.49]);book(books,[0,.06,0],C.wood,.65,.85);const b2=book(books,[0,.17,0],C.dark,.68,.80);b2.rotation.y=.1;book(books,[0,.28,0],C.lime,.62,.82);
