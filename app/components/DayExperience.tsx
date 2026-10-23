@@ -134,7 +134,7 @@ export default function DayExperience() {
       <div className="vignette" aria-hidden="true" />
       <div className={`day-veil ${closing?"is-closed":""}`} aria-hidden="true" />
       <header className="site-header">
-        <button className="wordmark" onClick={()=>go(0)} aria-label="В начало дня">stfn<span>.</span></button>
+        <button className="wordmark" onClick={()=>go(0)} aria-label="В начало дня">sph<span>.</span></button>
         <nav className="header-links" aria-label="Материалы"><button onClick={()=>openPanel("projects")}>Проекты</button><button onClick={()=>openPanel("philosophy")}>Тексты</button><button onClick={()=>openPanel("contact")}>Контакт</button></nav>
       </header>
       {!ready&&!failed&&<div className="loading" role="status"><LoaderCircle size={21}/><span>Свет включается…</span></div>}
