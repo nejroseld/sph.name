@@ -348,7 +348,7 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
     setMotion(value:boolean){motion=value;},
     setBlocked(value:boolean){blocked=value;},
     restart(){snap.jump(0);target=0;progress=0;arrival=0;sleepTime=0;loopSent=false;looping=false;loopK=0;wakeFade=false;lastIndex=0;t=0;},
-    goTo(chapter:number){snap.goTo(restPoint(chapter));},
+    goTo(chapter:number){snap.goTo(restPoint(chapter),motion);},
     reset(){desiredAngle=0;pointerX=0;pointerY=0;},
     destroy(){alive=false;cancelAnimationFrame(raf);snap.destroy();observer.disconnect();window.removeEventListener("scroll",sampleScroll);window.removeEventListener("resize",resize);mount.removeEventListener("pointerdown",onDown);mount.removeEventListener("pointermove",onMove);mount.removeEventListener("pointerup",onUp);mount.removeEventListener("pointercancel",onUp);mount.removeEventListener("pointerleave",onLeave);renderer.domElement.removeEventListener("webglcontextlost",contextLost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());environment.dispose();renderer.dispose();renderer.domElement.remove();},
   };

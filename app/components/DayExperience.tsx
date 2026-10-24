@@ -106,7 +106,7 @@ export default function DayExperience({ locale = "ru", notes = [] }: { locale?: 
   useEffect(()=>{flags.current.panel=panel;world.current?.setBlocked(!!panel||flags.current.closing);},[panel]);
   const go=(index:number)=>{
     // The world glides there itself (and lifts its one-chapter-per-gesture limit for the trip); otherwise plain scroll.
-    if(world.current&&motion)world.current.goTo(index);
+    if(world.current)world.current.goTo(index);
     else window.scrollTo({top:progressToScroll(restPoint(index)),behavior:motion?"smooth":"instant"});
   };
   const toggleMotion=()=>{const next=!motion;setMotion(next);flags.current.motion=next;world.current?.setMotion(next);};
