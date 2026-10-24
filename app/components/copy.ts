@@ -12,7 +12,7 @@ export const copy = {
     chapters: [
       { id:"morning", name:"Подъём", time:"07:00", title:"Степан.", action:null, actionLabel:"" },
       { id:"city", name:"По пути", time:"08:10", title:"Мысли по пути.", action:"philosophy", actionLabel:"Философия" },
-      { id:"learn", name:"Учёба", time:"09:40", title:"Линал,forever.", action:null, actionLabel:"" },
+      { id:"learn", name:"Учёба", time:"09:40", title:"Пытки линалом.", action:null, actionLabel:"" },
       { id:"build", name:"Проекты", time:"14:00", title:"В работе.", action:"projects", actionLabel:"Проекты" },
       { id:"security", name:"Безопасность", time:"17:30", title:"Безопасность.", action:null, actionLabel:"" },
       { id:"gym", name:"Зал", time:"20:00", title:"Ещё подход.", action:null, actionLabel:"" },
