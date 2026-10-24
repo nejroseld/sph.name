@@ -19,7 +19,7 @@ const IDLE_MS = 120;
 // Touch paging: the finger is ignored until it has moved DEADZONE px, then a swipe of DRAG viewport heights carries
 // the scene all the way to the neighbouring resting point; on release it commits past COMMIT viewport heights
 // or above FLICK px/ms, otherwise it springs back.
-const DEADZONE = 14, DRAG = .8, COMMIT = .2, FLICK = .6;
+const DEADZONE = 8, DRAG = .45, COMMIT = .08, FLICK = .3;
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 // Quintic "smootherstep": zero velocity and zero acceleration at both ends, so the glide neither jolts nor stops dead.
@@ -138,7 +138,7 @@ export function createAutoSnap(allowed: () => boolean, limited: () => boolean, t
     direction = dir; touch();
     if (!limited()) { place(target); endGesture(); return; }
     lo = Math.min(lo, target); hi = Math.max(hi, target);
-    if (!glide(target, performance.now())) endGesture();
+    if (!glide(target, performance.now(), true)) endGesture();
   };
   // The browser chrome or a rotation changed the track's length: keep the scene where it is.
   const onResize = () => { if (!swipe && !snapping) place(visual); };
@@ -150,10 +150,12 @@ export function createAutoSnap(allowed: () => boolean, limited: () => boolean, t
   addEventListener("touchcancel", onTouchEnd);
   addEventListener("resize", onResize);
   addEventListener("keydown", onKey);
-  const glide = (p: number, now: number) => {
+  // `quick` finishes a released swipe: the finger has already done part of the work, so the rest should not drag on.
+  const glide = (p: number, now: number, quick = false) => {
     from = scrollY; to = progressToScroll(p); goal = p;
     if (Math.abs(to - from) < 1) return false;
-    start = now; duration = 650 + 900 * Math.min(1.6, Math.abs(goal - scrollToProgress(from)));
+    const dist = Math.min(1.6, Math.abs(goal - scrollToProgress(from)));
+    start = now; duration = quick ? 380 + 520 * dist : 650 + 900 * dist;
     expected = expectedPrev = from; snapping = true; return true;
   };
   const bounded = () => gesture && limited();
