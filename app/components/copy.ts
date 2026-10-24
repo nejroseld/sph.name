@@ -8,7 +8,6 @@ export const copy = {
   ru: {
     lang: "ru",
     home: "/",
-    other: { href: "/en", label: "EN", aria: "English version" },
     email: "s@sph.by",
     chapters: [
       { id:"morning", name:"Подъём", time:"07:00", title:"Степан.", action:null, actionLabel:"" },
@@ -40,7 +39,6 @@ export const copy = {
   en: {
     lang: "en",
     home: "/en",
-    other: { href: "/", label: "RU", aria: "Русская версия" },
     email: "s@sph.name",
     chapters: [
       { id:"morning", name:"Wake up", time:"07:00", title:"Stepan.", action:null, actionLabel:"" },

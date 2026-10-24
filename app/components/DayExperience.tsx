@@ -8,7 +8,6 @@ import { TRACK_END, restPoint, progressToScroll, scrollToProgress } from "../wor
 import posterFrames from "../world/poster-frames.json";
 import { copy as dictionary, type Locale } from "./copy";
 import type { Note } from "./notes";
-import { LANGUAGE_KEY } from "./language";
 
 type Panel = "projects" | "philosophy" | "contact" | null;
 type World = { destroy():void; setMotion(value:boolean):void; setBlocked(value:boolean):void; reset():void; restart():void; goTo(chapter:number):void };
@@ -124,7 +123,7 @@ export default function DayExperience({ locale = "ru", notes = [] }: { locale?: 
       <div className={`day-veil ${closing?"is-closed":""}`} aria-hidden="true" />
       <header className="site-header">
         <button className="wordmark" onClick={()=>go(0)} aria-label={ui.home}>sph<span>.</span></button>
-        <nav className="header-links" aria-label={ui.materials}><button onClick={()=>openPanel("projects")}>{ui.projects}</button><button onClick={()=>openPanel("philosophy")}>{ui.writing}</button><button onClick={()=>openPanel("contact")}>{ui.contact}</button><a className="lang-switch" href={t.other.href} onClick={()=>{try{localStorage.setItem(LANGUAGE_KEY,locale==="ru"?"en":"ru");}catch{}}} hrefLang={t.other.href==="/"?"ru":"en"} aria-label={t.other.aria}>{t.other.label}</a></nav>
+        <nav className="header-links" aria-label={ui.materials}><button onClick={()=>openPanel("projects")}>{ui.projects}</button><button onClick={()=>openPanel("philosophy")}>{ui.writing}</button><button onClick={()=>openPanel("contact")}>{ui.contact}</button></nav>
       </header>
       {!ready&&!failed&&<div className="loading" role="status"><LoaderCircle size={21}/><span>{ui.loading}</span></div>}
       {failed&&<><picture className="scene-poster"><source media="(max-width:759px)" srcSet={`/scene-posters/${sleeping?"sleep":current.id}-mobile.webp`}/><img src={`/scene-posters/${sleeping?"sleep":current.id}.webp`} alt=""/></picture><span className="static-hint" role="status">{ui.still}</span></>}

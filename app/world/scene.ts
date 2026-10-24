@@ -17,7 +17,9 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
   const coarse=matchMedia("(pointer: coarse)").matches;
   const scene=new THREE.Scene();
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:"high-performance"});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,coarse?1.25:1.5));
+  // Sharp on phones (their screens are 3x, and a 1.25x cap left the scene visibly soft), while a pixel budget
+  // keeps tablets and large screens from rendering more than the GPU can comfortably fill.
+  const pixelRatio=(w:number,h:number)=>Math.max(1,Math.min(devicePixelRatio,coarse?2:1.5,Math.sqrt(3.5e6/Math.max(1,w*h))));
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
   renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -244,7 +246,7 @@ export function createWorld(mount:HTMLElement, initialMotion:boolean, onFailure:
   let sleepTime=0,loopSent=false,looping=false,loopK=0,wakeFade=false;
   const snap=createAutoSnap(()=>motion&&!blocked&&!drag&&!looping,()=>motion,()=>!blocked&&!looping);
   const sampleScroll=()=>{target=snap.target();};
-  const resize=()=>{const bounds=mount.getBoundingClientRect();width=bounds.width;height=bounds.height;if(!width||!height)return;renderer.setSize(width,height);camera.aspect=width/height;camera.updateProjectionMatrix();sampleScroll();};
+  const resize=()=>{const bounds=mount.getBoundingClientRect();width=bounds.width;height=bounds.height;if(!width||!height)return;renderer.setPixelRatio(pixelRatio(width,height));renderer.setSize(width,height);camera.aspect=width/height;camera.updateProjectionMatrix();sampleScroll();};
   const observer=new ResizeObserver(resize);observer.observe(mount);resize();progress=target;
   const onDown=(e:PointerEvent)=>{if(e.pointerType!=="mouse"||e.button!==0)return;drag=true;dragX=e.clientX;mount.setPointerCapture(e.pointerId);};
   // Only a mouse steers the camera; a finger is for swiping, and following it made the scene jump on every touch.
