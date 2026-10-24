@@ -43,7 +43,7 @@ export const copy = {
     chapters: [
       { id:"morning", name:"Wake up", time:"07:00", title:"Stepan.", action:null, actionLabel:"" },
       { id:"city", name:"On the way", time:"08:10", title:"Thoughts on the way.", action:"philosophy", actionLabel:"Philosophy" },
-      { id:"learn", name:"Study", time:"09:40", title:"Linear algebra, forever.", action:null, actionLabel:"" },
+      { id:"learn", name:"Study", time:"09:40", title:"Linear algebra torture.", action:null, actionLabel:"" },
       { id:"build", name:"Projects", time:"14:00", title:"Work in progress.", action:"projects", actionLabel:"Projects" },
       { id:"security", name:"Security", time:"17:30", title:"Security.", action:null, actionLabel:"" },
       { id:"gym", name:"Gym", time:"20:00", title:"One more set.", action:null, actionLabel:"" },
